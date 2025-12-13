@@ -1,3 +1,4 @@
+require("dotenv").config(); // Load local .env variables
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -11,6 +12,7 @@ const reviewRouter = require("./router/reviewRoute");
 const heroMessage = require("./json/heroMessage.json");
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
 /* =======================
    Middleware
@@ -29,7 +31,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // mobile apps or curl
+      if (!origin) return callback(null, true); // allow curl/Postman
       if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error("Not allowed by CORS"));
     },
@@ -40,20 +42,23 @@ app.use(
 );
 
 /* =======================
-   Root / Health / Hero Routes
+   Routes
 ======================= */
+
+// Root route
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Naya Axis Foods Backend is running",
     endpoints: {
       hero: "/hero",
-      api: "/api",
-      health: "/health"
+      health: "/health",
+      api: "/api"
     }
   });
 });
 
+// Hero route
 app.get("/hero", (req, res) => {
   res.json({
     success: true,
@@ -61,7 +66,7 @@ app.get("/hero", (req, res) => {
   });
 });
 
-// Optional health check
+// Health check route
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "ok",
@@ -70,9 +75,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-/* =======================
-   API Routes
-======================= */
+// API routers
 app.use("/api", subscribeRoute);
 app.use("/api", blogRoute);
 app.use("/api", productRouter);
@@ -80,7 +83,7 @@ app.use("/api", staffRouter);
 app.use("/api", reviewRouter);
 
 /* =======================
-   MongoDB Connection (Cached for Serverless)
+   MongoDB Connection (Mongoose 7+ safe)
 ======================= */
 let cached = global.mongoose;
 
@@ -94,6 +97,7 @@ async function connectDB() {
   if (!cached.promise) {
     cached.promise = mongoose.connect(process.env.MONGODB_URL, {
       bufferCommands: false
+      // no useNewUrlParser or useUnifiedTopology needed for Mongoose 7+
     });
   }
 
@@ -103,9 +107,18 @@ async function connectDB() {
 
 connectDB()
   .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB error:", err));
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 /* =======================
    Export App for Vercel
 ======================= */
 module.exports = app;
+
+/* =======================
+   Local server for testing
+======================= */
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running locally at http://localhost:${PORT}`);
+  });
+}
