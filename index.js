@@ -19,16 +19,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
 
-app.get("/", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Naya Axis Foods Backend is running",
-    endpoints: {
-      hero: "/hero",
-      api: "/api"
-    }
-  });
-});
+
 
 
 /* =======================
@@ -53,6 +44,16 @@ app.use(
   })
 );
 
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Naya Axis Foods Backend is running",
+    endpoints: {
+      hero: "/hero",
+      api: "/api"
+    }
+  });
+});
 /* =======================
    Routes
 ======================= */
