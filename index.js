@@ -76,11 +76,11 @@ app.get("/health", (req, res) => {
 });
 
 // API routers
-app.use("/api", subscribeRoute);
-app.use("/api", blogRoute);
-app.use("/api", productRouter);
-app.use("/api", staffRouter);
-app.use("/api", reviewRouter);
+app.use("/", subscribeRoute);
+app.use("/", blogRoute);
+app.use("/", productRouter);
+app.use("/", staffRouter);
+app.use("/", reviewRouter);
 
 /* =======================
    MongoDB Connection (Mongoose 7+ safe)
