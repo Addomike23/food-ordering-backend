@@ -1,205 +1,181 @@
-const reviewModel = require('../model/reviewModel')
+const connectDB = require("../utils/connectDB");
+const reviewModel = require("../model/reviewModel");
 const cloudinary = require("../config/cloudinary");
-const { reviewValidator } = require('../middleware/validator')
-const transporter = require('../middleware/nodemailer')
-const crypto = require("crypto");
+const { reviewValidator } = require("../middleware/validator");
+const transporter = require("../middleware/nodemailer");
 
-function generateImageHash(buffer) {
-    return crypto
-        .createHash("sha256")
-        .update(buffer)
-        .digest("hex");
+/* =========================
+   Cloudinary Upload Helper
+========================= */
+function uploadBufferToCloudinary(buffer, folder = "reviews") {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        quality: "auto",
+        fetch_format: "auto",
+        transformation: [{ width: 600, crop: "limit" }]
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    stream.end(buffer);
+  });
 }
 
-function uploadBufferToCloudinary(buffer, folder = "products") {
-    return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-            {
-                folder,
-                quality: "auto",
-                fetch_format: "auto",
-                transformation: [
-                    { width: 1200, crop: "limit" },
-                    { quality: "auto" }
-                ]
-            },
-            (error, result) => {
-                if (error) return reject(error);
-                resolve(result);
-            }
-        );
-        stream.end(buffer);
-    });
-}
-
-// create review card
+/* =========================
+   CREATE REVIEW
+========================= */
 const createReview = async (req, res) => {
-    // destruct review data
-    const { name, email, content, role, rating } = req.body
+  try {
+    await connectDB();
 
-    try {
-        // validate review data
-        const { error } = reviewValidator.validate({ name, email, content, role, rating })
-        // send error response
-        if (error) {
-            return res.status(400).json({ success: false, message: error.details[0].message })
-        }
+    const { name, email, content, role, rating } = req.body;
 
-        if (!req.file) {
-            return res.status(400).json({ error: "Product image is required." });
-        }
+    const { error } = reviewValidator.validate({
+      name,
+      email,
+      content,
+      role,
+      rating
+    });
 
-
-
-        // Upload image to Cloudinary
-        const result = await uploadBufferToCloudinary(req.file.buffer);
-
-        await transporter.sendMail({
-            from: email,
-            to: process.env.EMAIL,
-            subject: "New Customer Feedback Received",
-
-            attachments: [
-                {
-                    filename: "image.jpg",
-                    path: encodeURI(`${result.secure_url}`),
-                    cid: "image"
-                }
-            ],
-
-            html: `
-    <div style="max-width: 640px; margin: auto; background: #121212;
-                font-family: Arial, sans-serif; color: #e0e0e0;
-                border-radius: 10px; overflow: hidden;
-                box-shadow: 0 6px 25px rgba(0,0,0,0.6);">
-
-        <!-- Header -->
-        <div style="background: linear-gradient(to right, #2e7d32, #1b5e20);
-                    padding: 24px; text-align: center; color: #ffffff;">
-            <h2 style="margin: 0; font-size: 22px;">New Customer Feedback</h2>
-            <p style="margin-top: 6px; font-size: 14px; opacity: 0.9;">
-                Review & testimonial notification
-            </p>
-        </div>
-
-        <!-- Body -->
-        <div style="padding: 28px 30px;">
-
-            <!-- Sender Profile -->
-            <div style="display: flex; align-items: center; margin-bottom: 20px;">
-                <img src="cid:image" alt="Sender Avatar"
-                     style="width: 55px; height: 55px; border-radius: 50%;
-                            margin-right: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.4);">
-                <div>
-                    <p style="margin: 0; font-size: 16px; font-weight: bold; color: #ffffff;">
-                        ${name}
-                    </p>
-                    <p style="margin: 4px 0 0; font-size: 13px; color: #9e9e9e;">
-                        ${role}
-                    </p>
-                </div>
-            </div>
-
-            <!-- Rating -->
-            <div style="margin-bottom: 18px;">
-                <p style="margin: 0 0 6px; font-size: 14px; color: #bdbdbd;">
-                    Rating
-                </p>
-                <div style="font-size: 20px; letter-spacing: 2px; color: #FFC107;">
-                    ${"★".repeat(rating)}${"☆".repeat(5 - rating)}
-                </div>
-            </div>
-
-            <!-- Feedback Content -->
-            <div style="background: #1e1e1e; padding: 20px;
-                        border-radius: 8px; border-left: 4px solid #4CAF50;">
-                <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #d4d4d4;">
-                    ${content}
-                </p>
-            </div>
-
-            <!-- Note -->
-            <p style="margin-top: 22px; font-size: 13px; color: #9e9e9e;">
-                This message was automatically generated. 
-                Please log in to your dashboard to manage this feedback.
-            </p>
-        </div>
-
-        <!-- Footer -->
-        <div style="background: #1a1a1a; padding: 16px; text-align: center;
-                    font-size: 12px; color: #8e8e8e;">
-            <p style="margin: 0;">
-                © ${new Date().getFullYear()} Naya Axis Foods
-            </p>
-        </div>
-    </div>
-    `
-        });
-
-
-        // Create product
-        const newReview = await reviewModel.create({
-            name,
-            content,
-            role,
-            rating,
-            avatar: result.secure_url,
-            public_id: result.public_id,
-
-        });
-
-        // Response to client
-        res.status(201).json({
-            success: true,
-            message: "Review created successfully",
-            reviews: newReview
-        });
-
-    } catch (error) {
-
-        res.status(500).json({ error: err.message });
-
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
     }
-}
 
-// get all review
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({
+        success: false,
+        message: "Reviewer image is required"
+      });
+    }
+
+    const upload = await uploadBufferToCloudinary(
+      req.file.buffer,
+      "success-axis-food/reviews"
+    );
+
+    // ✅ Save to DB FIRST
+    const newReview = await reviewModel.create({
+      name,
+      content,
+      role,
+      rating,
+      avatar: upload.secure_url,
+      public_id: upload.public_id
+    });
+
+    // ✅ Send email AFTER DB success
+    await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: process.env.EMAIL,
+      subject: "New Customer Feedback Received",
+      attachments: [
+        {
+          filename: "avatar.jpg",
+          path: upload.secure_url,
+          cid: "avatar"
+        }
+      ],
+      html: `
+        <div style="max-width:640px;margin:auto;background:#121212;color:#e0e0e0;
+                    font-family:Arial;border-radius:10px;overflow:hidden;">
+          <div style="padding:24px;background:#1b5e20;color:#fff;text-align:center">
+            <h2>New Customer Feedback</h2>
+          </div>
+          <div style="padding:24px">
+            <div style="display:flex;align-items:center;margin-bottom:16px">
+              <img src="cid:avatar" style="width:55px;height:55px;border-radius:50%;margin-right:14px"/>
+              <div>
+                <strong>${name}</strong><br/>
+                <small>${role}</small>
+              </div>
+            </div>
+            <div style="color:#FFC107;font-size:18px;margin-bottom:12px">
+              ${"★".repeat(rating)}${"☆".repeat(5 - rating)}
+            </div>
+            <p>${content}</p>
+          </div>
+        </div>
+      `
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Review created successfully",
+      review: newReview
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error creating review",
+      error: error.message
+    });
+  }
+};
+
+/* =========================
+   GET ALL REVIEWS
+========================= */
 const allReview = async (req, res) => {
-    try {
-        // search DB for staffs
-        const reviews = reviewModel.find().sort({ createdAt: -1 })
-        res.status(201).json({ success: true, review: reviews })
-    } catch (error) {
-        res.status(500).json({ error: err.message });
-    }
-}
+  try {
+    await connectDB();
 
-// delete staff
+    const reviews = await reviewModel
+      .find()
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      reviews
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/* =========================
+   DELETE REVIEW
+========================= */
 const deleteReview = async (req, res) => {
-    try {
-        const review = await reviewModel.findById(req.params.id);
-        if (!review) {
-            return res.status(404).json({ message: "staff not found" });
-        }
+  try {
+    await connectDB();
 
-        // Delete Cloudinary image
-        if (review.public_id) {
-            try {
-                await cloudinary.uploader.destroy(review.public_id);
-            } catch (err) {
-                // console.warn("Cloudinary delete failed:", err.message);
-                return res.status(400).json({ err: "Cloudinary delete failed:" })
-            }
-        }
-
-        // Delete MongoDB record
-        await review.deleteOne();
-
-        res.json({ message: "review deleted successfully" });
-
-    } catch (error) {
-
-        res.status(500).json({ error: error.message, message: "internal error" });
+    const review = await reviewModel.findById(req.params.id);
+    if (!review) {
+      return res.status(404).json({ message: "Review not found" });
     }
-}
 
-module.exports = { createReview, allReview, deleteReview }
+    if (review.public_id) {
+      await cloudinary.uploader.destroy(review.public_id).catch(() => {});
+    }
+
+    await review.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: "Review deleted successfully"
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+module.exports = {
+  createReview,
+  allReview,
+  deleteReview
+};

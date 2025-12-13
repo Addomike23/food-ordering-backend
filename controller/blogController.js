@@ -1,14 +1,10 @@
-// controllers/blogController.js
-const fs = require("fs"); // kept in case you later use disk paths
-const blog = require("../model/blogModel"); // ensure this exports the mongoose model
+const connectDB = require("../utils/connectDB");
+const blog = require("../model/blogModel");
 const cloudinary = require("../config/cloudinary");
-const {blogValidator, allowedUpdateSchema} = require('../middleware/validator')
-
-
+const { blogValidator, allowedUpdateSchema } = require("../middleware/validator");
 
 /**
- * Upload buffer to Cloudinary using upload_stream (provided earlier).
- * Assumes cloudinary.v2 configured.
+ * Upload buffer to Cloudinary
  */
 function uploadBufferToCloudinary(buffer, folder = "blogs") {
   return new Promise((resolve, reject) => {
@@ -17,10 +13,7 @@ function uploadBufferToCloudinary(buffer, folder = "blogs") {
         folder,
         quality: "auto",
         fetch_format: "auto",
-        transformation: [
-          { width: 1200, crop: "limit" },
-          { quality: "auto" }
-        ]
+        transformation: [{ width: 1200, crop: "limit" }]
       },
       (error, result) => {
         if (error) return reject(error);
@@ -31,143 +24,191 @@ function uploadBufferToCloudinary(buffer, folder = "blogs") {
   });
 }
 
-
-// CREATE
+/* =========================
+   CREATE BLOG
+========================= */
 exports.createBlog = async (req, res) => {
-    const {title, category, description} = req.body
-
   try {
-    // 1) Ensure file exists (multer memory storage expected)
+    await connectDB();
+
+    const { title, category, description } = req.body;
+
     if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ error: "Image file is required (key: 'image')." });
+      return res.status(400).json({ message: "Image file is required" });
     }
 
-    const { error } = blogValidator.validate({ category, title, description });
-        if (error) {
-            return res.status(400).json({
-                success: false,
-                message: error.details[0].message,
-            });
-        }
+    const { error } = blogValidator.validate({ title, category, description });
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
+    }
 
-    // 3) Upload image to Cloudinary
-    const result = await uploadBufferToCloudinary(req.file.buffer, "success-axis-food/blogs");
+    const upload = await uploadBufferToCloudinary(
+      req.file.buffer,
+      "success-axis-food/blogs"
+    );
 
-    // 4) Save to DB (include public_id for easier deletes)
     const newBlog = await blog.create({
-      title: title,
-      category: category,
-      description: description,
-      image: result.secure_url,
-      public_id: result.public_id
+      title,
+      category,
+      description,
+      image: upload.secure_url,
+      public_id: upload.public_id
     });
 
-    return res.status(201).json({ message: "Blog created", blog: newBlog });
-
+    res.status(201).json({
+      success: true,
+      message: "Blog created",
+      blog: newBlog
+    });
   } catch (err) {
-    // console.error("createBlog error:", err);
-    // Handle common Cloudinary errors vs generic
-    return res.status(500).json({ message: "Error creating blog", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: "Error creating blog",
+      error: err.message
+    });
   }
 };
 
-// GET ALL
+/* =========================
+   GET ALL BLOGS
+========================= */
 exports.getBlogs = async (req, res) => {
   try {
-    // search and fetch all block post
-    const blogs = await blog.find().sort({ createdAt: -1 });
+    await connectDB();
 
-    // send respond data to client
-    res.status(201).json({success: true, blogData: blogs});
+    const blogs = await blog
+      .find()
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      blogData: blogs
+    });
   } catch (err) {
-
-    res.status(500).json({ message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
 
-// GET ONE
+/* =========================
+   GET SINGLE BLOG
+========================= */
 exports.getSingleBlog = async (req, res) => {
   try {
-    const blogs = await blog.findById(req.params.id);
-    if (!blogs) return res.status(404).json({ message: "Blog not found" });
-    res.json(blogs);
+    await connectDB();
+
+    const singleBlog = await blog.findById(req.params.id).lean();
+
+    if (!singleBlog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      blog: singleBlog
+    });
   } catch (err) {
-    // console.error("getSingleBlog error:", err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
   }
 };
 
-// UPDATE BLOG (with optional new image)
+/* =========================
+   UPDATE BLOG
+========================= */
 exports.updateBlog = async (req, res) => {
   try {
-    
-    const { error, value } = allowedUpdateSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    await connectDB();
+
+    const { error, value } = allowedUpdateSchema.validate(req.body, {
+      abortEarly: false,
+      stripUnknown: true
+    });
+
     if (error) {
-      const details = error.details.map(d => d.message);
-      return res.status(400).json({ error: "Validation failed", details });
+      return res.status(400).json({
+        message: "Validation failed",
+        details: error.details.map(d => d.message)
+      });
     }
 
     const blogDoc = await blog.findById(req.params.id);
-    if (!blogDoc) return res.status(404).json({ message: "Blog not found" });
-
-    let imageUrl = blogDoc.image;
-    let public_id = blogDoc.public_id;
-
-    // If a new image is uploaded, replace in Cloudinary
-    if (req.file && req.file.buffer) {
-      // Delete old image if public_id exists
-      if (public_id) {
-        try {
-          await cloudinary.uploader.destroy(public_id);
-        } catch (delErr) {
-          // Log but continue — do not stop update if delete fails
-          console.warn("Failed to delete old image:", delErr.message || delErr);
-        }
-      }
-
-      const uploadResult = await uploadBufferToCloudinary(req.file.buffer, "success-axis-food/blogs");
-      imageUrl = uploadResult.secure_url;
-      public_id = uploadResult.public_id;
+    if (!blogDoc) {
+      return res.status(404).json({ message: "Blog not found" });
     }
 
-    // Build update object
-    const updatePayload = {
-      ...value, // validated text fields
-      image: imageUrl,
-      public_id
-    };
+    let image = blogDoc.image;
+    let public_id = blogDoc.public_id;
 
-    const updated = await blog.findByIdAndUpdate(req.params.id, updatePayload, { new: true, runValidators: true });
+    if (req.file && req.file.buffer) {
+      if (public_id) {
+        await cloudinary.uploader.destroy(public_id).catch(() => {});
+      }
 
-    res.json({ message: "Blog updated", blog: updated });
+      const upload = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "success-axis-food/blogs"
+      );
+
+      image = upload.secure_url;
+      public_id = upload.public_id;
+    }
+
+    const updatedBlog = await blog.findByIdAndUpdate(
+      req.params.id,
+      { ...value, image, public_id },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Blog updated",
+      blog: updatedBlog
+    });
   } catch (err) {
-    // console.error("updateBlog error:", err);
-    res.status(500).json({ message: "Error updating blog", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: "Error updating blog",
+      error: err.message
+    });
   }
 };
 
-// DELETE BLOG
+/* =========================
+   DELETE BLOG
+========================= */
 exports.deleteBlog = async (req, res) => {
   try {
-    const blogDoc = await blog.findById(req.params.id);
-    if (!blogDoc) return res.status(404).json({ message: "Blog not found" });
+    await connectDB();
 
-    // Remove image from Cloudinary if we have public_id
-    if (blogDoc.public_id) {
-      try {
-        await cloudinary.uploader.destroy(blogDoc.public_id);
-      } catch (err) {
-        console.warn("Cloudinary delete failed:", err.message || err);
-        // continue to delete DB record regardless
-      }
+    const blogDoc = await blog.findById(req.params.id);
+    if (!blogDoc) {
+      return res.status(404).json({ message: "Blog not found" });
     }
 
-    // Remove blog from DB
+    if (blogDoc.public_id) {
+      await cloudinary.uploader.destroy(blogDoc.public_id).catch(() => {});
+    }
+
     await blogDoc.deleteOne();
 
-    res.json({ message: "Blog deleted successfully" });
+    res.status(200).json({
+      success: true,
+      message: "Blog deleted successfully"
+    });
   } catch (err) {
-    // console.error("deleteBlog error:", err);
-    res.status(500).json({ message: "Error deleting blog", error: err.message });
+    res.status(500).json({
+      success: false,
+      message: "Error deleting blog",
+      error: err.message
+    });
   }
 };

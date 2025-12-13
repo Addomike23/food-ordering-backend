@@ -1,194 +1,227 @@
+const connectDB = require("../utils/connectDB");
 const productModel = require("../model/productModel");
 const cloudinary = require("../config/cloudinary");
-const {productValidator} = require('../middleware/validator')
+const { productValidator } = require("../middleware/validator");
 const crypto = require("crypto");
 
+
+/* =========================
+   Helpers
+========================= */
 function generateImageHash(buffer) {
-    return crypto
-        .createHash("sha256")
-        .update(buffer)
-        .digest("hex");
+  return crypto.createHash("sha256").update(buffer).digest("hex");
 }
 
-
-// UTILITY: Upload buffer to Cloudinary
 function uploadBufferToCloudinary(buffer, folder = "products") {
-    return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-            {
-                folder,
-                quality: "auto",
-                fetch_format: "auto",
-                transformation: [
-                    { width: 1200, crop: "limit" },
-                    { quality: "auto" }
-                ]
-            },
-            (error, result) => {
-                if (error) return reject(error);
-                resolve(result);
-            }
-        );
-        stream.end(buffer);
-    });
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        quality: "auto",
+        fetch_format: "auto",
+        transformation: [{ width: 1200, crop: "limit" }]
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    stream.end(buffer);
+  });
 }
 
-
-// create product controller
+/* =========================
+   CREATE PRODUCT
+========================= */
 exports.createProduct = async (req, res) => {
-    const { category, title, description, price } = req.body;
+  try {
+    await connectDB();
 
-    try {
-        // Validate fields
-        const { error } = productValidator.validate({ category, price, title, description });
-        if (error) {
-            return res.status(400).json({
-                success: false,
-                message: error.details[0].message,
-            });
-        }
+    const { title, category, description, price } = req.body;
 
-        if (!req.file) {
-            return res.status(400).json({ error: "Product image is required." });
-        }
+    const { error } = productValidator.validate({
+      title,
+      category,
+      description,
+      price
+    });
 
-        // Generate hash of uploaded image
-        const imageHash = generateImageHash(req.file.buffer);
-
-        // Check for duplicates
-        const existingProduct = await productModel.findOne({ imageHash });
-        if (existingProduct) {
-            return res.status(409).json({
-                success: false,
-                message: "A product with this image already exists.",
-            });
-        }
-
-        // Upload image to Cloudinary
-        const result = await uploadBufferToCloudinary(req.file.buffer);
-
-        // Create product
-        const newProduct = await productModel.create({
-            title,
-            category,
-            description,
-            price,
-            image: result.secure_url,
-            public_id: result.public_id,
-            imageHash
-        });
-
-        // Response to client
-        res.status(201).json({
-            success: true,
-            message: "Product created successfully",
-            product: newProduct
-        });
-
-    } catch (err) {
-        // console.error("Create product error:", err);
-        res.status(500).json({ error: err.message });
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
     }
+
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({
+        success: false,
+        message: "Product image is required"
+      });
+    }
+
+    const imageHash = generateImageHash(req.file.buffer);
+
+    const existingProduct = await productModel.findOne({ imageHash }).lean();
+    if (existingProduct) {
+      return res.status(409).json({
+        success: false,
+        message: "A product with this image already exists"
+      });
+    }
+
+    const upload = await uploadBufferToCloudinary(
+      req.file.buffer,
+      "success-axis-food/products"
+    );
+
+    const newProduct = await productModel.create({
+      title,
+      category,
+      description,
+      price,
+      image: upload.secure_url,
+      public_id: upload.public_id,
+      imageHash
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      product: newProduct
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error creating product",
+      error: err.message
+    });
+  }
 };
 
-
-// fetch all products
+/* =========================
+   GET ALL PRODUCTS
+========================= */
 exports.getProducts = async (req, res) => {
-    try {
-        const products = await productModel.find().sort({ createdAt: -1 });
+  try {
+    await connectDB();
 
-        res.json({ success: true, data: products });
+    const products = await productModel
+      .find()
+      .sort({ createdAt: -1 })
+      .lean();
 
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    res.status(200).json({
+      success: true,
+      data: products
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
 };
 
-// update product
+/* =========================
+   UPDATE PRODUCT
+========================= */
 exports.updateProduct = async (req, res) => {
-    const {title, category, price, description} = req.body
-    try {
-        // Validate fields
-        const { error } = productValidator.validate({ category, price, title, description });
-        if (error) {
-            return res.status(400).json({
-                success: false,
-                message: error.details[0].message,
-            });
-        }
+  try {
+    await connectDB();
 
-        const product = await productModel.findById(req.params.id);
+    const { title, category, description, price } = req.body;
 
-        if (!product) {
-            return res.status(404).json({ message: "Product not found" });
-        }
+    const { error } = productValidator.validate({
+      title,
+      category,
+      description,
+      price
+    });
 
-        let imageUrl = product.image;
-        let public_id = product.public_id;
-
-        // New image uploaded?
-        if (req.file) {
-            // delete old image
-            if (product.public_id) {
-                try {
-                    await cloudinary.uploader.destroy(product.public_id);
-                } catch (error) {
-                    console.warn("Cloudinary delete failed:", error.message);
-                }
-            }
-
-            // upload new image
-            const result = await uploadBufferToCloudinary(req.file.buffer);
-            imageUrl = result.secure_url;
-            public_id = result.public_id;
-        }
-
-        const updated = await productModel.findByIdAndUpdate(
-            req.params.id,
-            {
-                title: title,
-                category: category,
-                price: price,
-                description: description,
-                image: imageUrl,
-                public_id
-            },
-            { new: true }
-        );
-
-        res.json({ success: true, message: "Product updated", data: updated });
-
-    } catch (err) {
-        // console.error("Update product error:", err);
-        res.status(500).json({ error: err.message });
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
     }
+
+    const product = await productModel.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    let image = product.image;
+    let public_id = product.public_id;
+
+    if (req.file && req.file.buffer) {
+      if (public_id) {
+        await cloudinary.uploader.destroy(public_id).catch(() => {});
+      }
+
+      const upload = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "success-axis-food/products"
+      );
+
+      image = upload.secure_url;
+      public_id = upload.public_id;
+    }
+
+    const updatedProduct = await productModel.findByIdAndUpdate(
+      req.params.id,
+      {
+        title,
+        category,
+        description,
+        price,
+        image,
+        public_id
+      },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Product updated",
+      data: updatedProduct
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating product",
+      error: err.message
+    });
+  }
 };
 
-// Delete product controller
-
+/* =========================
+   DELETE PRODUCT
+========================= */
 exports.deleteProduct = async (req, res) => {
-    try {
-        const productDoc = await productModel.findById(req.params.id);
-        if (!productDoc) {
-            return res.status(404).json({ message: "Product not found" });
-        }
+  try {
+    await connectDB();
 
-        // Delete Cloudinary image
-        if (productDoc.public_id) {
-            try {
-                await cloudinary.uploader.destroy(productDoc.public_id);
-            } catch (err) {
-                console.warn("Cloudinary delete failed:", err.message);
-            }
-        }
-
-        // Delete MongoDB record
-        await productDoc.deleteOne();
-
-        res.json({ message: "Product deleted successfully" });
-
-    } catch (err) {
-        // console.error("Delete product error:", err);
-        res.status(500).json({ error: err.message });
+    const productDoc = await productModel.findById(req.params.id);
+    if (!productDoc) {
+      return res.status(404).json({ message: "Product not found" });
     }
+
+    if (productDoc.public_id) {
+      await cloudinary.uploader.destroy(productDoc.public_id).catch(() => {});
+    }
+
+    await productDoc.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: "Product deleted successfully"
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error deleting product",
+      error: err.message
+    });
+  }
 };
