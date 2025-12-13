@@ -19,9 +19,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
 
-
-
-
 /* =======================
    CORS Configuration
 ======================= */
@@ -32,10 +29,8 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+      if (!origin) return callback(null, true); // mobile apps or curl
+      if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
@@ -44,19 +39,21 @@ app.use(
   })
 );
 
+/* =======================
+   Root / Health / Hero Routes
+======================= */
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Naya Axis Foods Backend is running",
     endpoints: {
       hero: "/hero",
-      api: "/api"
+      api: "/api",
+      health: "/health"
     }
   });
 });
-/* =======================
-   Routes
-======================= */
+
 app.get("/hero", (req, res) => {
   res.json({
     success: true,
@@ -64,6 +61,18 @@ app.get("/hero", (req, res) => {
   });
 });
 
+// Optional health check
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date()
+  });
+});
+
+/* =======================
+   API Routes
+======================= */
 app.use("/api", subscribeRoute);
 app.use("/api", blogRoute);
 app.use("/api", productRouter);
@@ -71,7 +80,7 @@ app.use("/api", staffRouter);
 app.use("/api", reviewRouter);
 
 /* =======================
-   MongoDB Connection (Cached)
+   MongoDB Connection (Cached for Serverless)
 ======================= */
 let cached = global.mongoose;
 
@@ -92,11 +101,11 @@ async function connectDB() {
   return cached.conn;
 }
 
-connectDB().then(() => {
-  console.log("MongoDB connected");
-});
+connectDB()
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.error("MongoDB error:", err));
 
 /* =======================
-   Export App (REQUIRED)
+   Export App for Vercel
 ======================= */
 module.exports = app;
