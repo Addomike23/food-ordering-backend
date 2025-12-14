@@ -47,7 +47,7 @@ const subscriptionTemplate = () => `
     </ul>
 
     <div style="text-align:center;margin:30px 0;">
-      <a href="https://nayaaxisfoods.vercel.app/products"
+      <a href="https://nayaaxisfoods.vercel.app/"
          style="background:#2e7d32;color:#fff;padding:12px 28px;
                 text-decoration:none;border-radius:6px;">
         Visit Our Shop

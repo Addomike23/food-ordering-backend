@@ -78,10 +78,10 @@ const staffValidator = joi.object({
 const productValidator = joi.object({
     category: joi.string().min(2).max(100),
     price: joi.string().min(2).max(100),
-    name: joi.string().min(5).max(200),
-    status: joi.string().min(5).max(200),
-    size: joi.string().min(5).max(200),
-    description: joi.string().min(10).max(5000)
+    name: joi.string().min(2).max(200),
+    status: joi.string().min(2).max(200),
+    size: joi.string().min(2).max(200),
+    description: joi.string().min(10).max(500)
 }).min(1); // at least one field required
 
 
