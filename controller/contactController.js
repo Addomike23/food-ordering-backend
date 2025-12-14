@@ -11,7 +11,86 @@ const contactValidator = Joi.object({
 });
 
 /* =======================
-   Contact Controller
+   Email Templates
+======================= */
+const companyEmailHTML = ({ name, email, message }) => `
+<div style="max-width:640px;margin:auto;background:#121212;
+            font-family:Arial,sans-serif;color:#e0e0e0;
+            border-radius:12px;overflow:hidden;
+            box-shadow:0 8px 30px rgba(0,0,0,.6);">
+
+  <div style="background:linear-gradient(to right,#2e7d32,#1b5e20);
+              padding:26px;text-align:center;">
+    <h2 style="margin:0;color:#fff;">New Contact Message</h2>
+    <p style="margin-top:6px;font-size:14px;opacity:.9;">
+      Naya Axis Foods Website
+    </p>
+  </div>
+
+  <div style="padding:30px 28px;">
+    <p style="font-size:14px;color:#9e9e9e;margin:0;">From</p>
+    <p style="font-size:17px;color:#fff;margin:4px 0 0;">${name}</p>
+    <p style="font-size:14px;color:#81c784;margin:2px 0 18px;">
+      ${email}
+    </p>
+
+    <div style="background:#1e1e1e;padding:22px;border-radius:8px;
+                border-left:4px solid #4CAF50;">
+      <p style="margin:0;font-size:14px;line-height:1.7;color:#d4d4d4;">
+        ${message.replace(/\n/g, "<br/>")}
+      </p>
+    </div>
+
+    <p style="margin-top:24px;font-size:13px;color:#9e9e9e;">
+      You can reply directly to this email to respond to the sender.
+    </p>
+  </div>
+
+  <div style="background:#1a1a1a;padding:16px;text-align:center;
+              font-size:12px;color:#8e8e8e;">
+    © ${new Date().getFullYear()} Naya Axis Foods
+  </div>
+</div>
+`;
+
+const senderConfirmationHTML = ({ name }) => `
+<div style="max-width:640px;margin:auto;background:#ffffff;
+            font-family:Arial,sans-serif;color:#333;
+            border-radius:12px;overflow:hidden;
+            box-shadow:0 8px 30px rgba(0,0,0,.15);">
+
+  <div style="background:#2e7d32;padding:26px;text-align:center;">
+    <h2 style="margin:0;color:#fff;">Message Received</h2>
+  </div>
+
+  <div style="padding:28px;">
+    <p style="font-size:16px;">Hello ${name},</p>
+
+    <p style="font-size:14px;line-height:1.7;">
+      Thank you for contacting <strong>Naya Axis Foods</strong>.
+      We have received your message and our team will get back to you
+      as soon as possible.
+    </p>
+
+    <p style="font-size:14px;line-height:1.7;">
+      If your inquiry is urgent, please reply to this email.
+    </p>
+
+    <p style="margin-top:26px;font-size:14px;">
+      Kind regards,<br/>
+      <strong>Naya Axis Foods Team</strong>
+    </p>
+  </div>
+
+  <div style="background:#f5f5f5;padding:14px;text-align:center;
+              font-size:12px;color:#777;">
+    © ${new Date().getFullYear()} Naya Axis Foods
+  </div>
+</div>
+`;
+
+/* =======================
+   Controller
 ======================= */
 const sendContactMessage = async (req, res) => {
   const { name, email, message } = req.body;
@@ -26,65 +105,21 @@ const sendContactMessage = async (req, res) => {
       });
     }
 
-    /* Send email */
+    /* Email to company */
     await transporter.sendMail({
-      from: `"Contact Form" <${process.env.EMAIL}>`,
+      from: `"Website Contact" <${process.env.EMAIL}>`,
       to: process.env.EMAIL,
       replyTo: email,
       subject: `📩 New Contact Message from ${name}`,
-      html: `
-<div style="max-width: 640px; margin: auto; background: #121212;
-            font-family: Arial, sans-serif; color: #e0e0e0;
-            border-radius: 12px; overflow: hidden;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.6);">
+      html: companyEmailHTML({ name, email, message })
+    });
 
-  <!-- Header -->
-  <div style="background: linear-gradient(to right, #2e7d32, #1b5e20);
-              padding: 26px; text-align: center;">
-    <h2 style="margin: 0; color: #ffffff;">New Contact Message</h2>
-    <p style="margin-top: 6px; font-size: 14px; opacity: 0.9;">
-      Naya Axis Foods Website
-    </p>
-  </div>
-
-  <!-- Body -->
-  <div style="padding: 30px 28px;">
-
-    <!-- Sender Info -->
-    <div style="margin-bottom: 22px;">
-      <p style="margin: 0; font-size: 14px; color: #9e9e9e;">From</p>
-      <p style="margin: 4px 0 0; font-size: 17px; color: #ffffff;">
-        ${name}
-      </p>
-      <p style="margin: 2px 0 0; font-size: 14px; color: #81c784;">
-        ${email}
-      </p>
-    </div>
-
-    <!-- Message -->
-    <div style="background: #1e1e1e; padding: 22px;
-                border-radius: 8px;
-                border-left: 4px solid #4CAF50;">
-      <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #d4d4d4;">
-        ${message.replace(/\n/g, "<br/>")}
-      </p>
-    </div>
-
-    <!-- Footer Note -->
-    <p style="margin-top: 26px; font-size: 13px; color: #9e9e9e;">
-      You can reply directly to this email to respond to the sender.
-    </p>
-  </div>
-
-  <!-- Footer -->
-  <div style="background: #1a1a1a; padding: 16px; text-align: center;
-              font-size: 12px; color: #8e8e8e;">
-    <p style="margin: 0;">
-      © ${new Date().getFullYear()} Naya Axis Foods
-    </p>
-  </div>
-</div>
-`
+    /* Confirmation email to sender */
+    await transporter.sendMail({
+      from: `"Naya Axis Foods" <${process.env.EMAIL}>`,
+      to: email,
+      subject: "✅ We’ve received your message",
+      html: senderConfirmationHTML({ name })
     });
 
     return res.status(200).json({
