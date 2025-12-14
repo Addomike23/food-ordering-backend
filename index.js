@@ -2,14 +2,13 @@ require("dotenv").config(); // Load local .env variables
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-
 const subscribeRoute = require("./router/subscriptionRoute");
 const blogRoute = require("./router/blogRoute");
 const productRouter = require("./router/productRoute");
 const staffRouter = require("./router/staffRoute");
 const reviewRouter = require("./router/reviewRoute");
 const heroMessage = require("./json/heroMessage.json");
-
+const contactRoute = require("./router/contactRoute");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -80,6 +79,7 @@ app.use("/", blogRoute);
 app.use("/", productRouter);
 app.use("/", staffRouter);
 app.use("/", reviewRouter);
+app.use("/", contactRoute);
 
 /* =======================
    Export App for Vercel

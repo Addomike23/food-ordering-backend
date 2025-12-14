@@ -72,7 +72,7 @@ const createReview = async (req, res) => {
 
     // ✅ Send email AFTER DB success
     await transporter.sendMail({
-      from: process.env.EMAIL,
+      from: email,
       to: process.env.EMAIL,
       subject: "New Customer Feedback Received",
       attachments: [
