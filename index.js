@@ -2,7 +2,6 @@ require("dotenv").config(); // Load local .env variables
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const mongoose = require("mongoose");
 
 const subscribeRoute = require("./router/subscriptionRoute");
 const blogRoute = require("./router/blogRoute");
@@ -25,13 +24,13 @@ app.use(helmet());
    CORS Configuration
 ======================= */
 const allowedOrigins = [
-  "https://nayaaxisfoods.vercel.app/"
+  "https://nayaaxisfoods.vercel.app"
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // allow curl/Postman
+      if (!origin) return callback(null, true); // allow Postman / curl
       if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error("Not allowed by CORS"));
     },
@@ -83,39 +82,12 @@ app.use("/", staffRouter);
 app.use("/", reviewRouter);
 
 /* =======================
-   MongoDB Connection (Mongoose 7+ safe)
-======================= */
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
-
-async function connectDB() {
-  if (cached.conn) return cached.conn;
-
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(process.env.MONGODB_URL, {
-      bufferCommands: false
-      // no useNewUrlParser or useUnifiedTopology needed for Mongoose 7+
-    });
-  }
-
-  cached.conn = await cached.promise;
-  return cached.conn;
-}
-
-connectDB()
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
-
-/* =======================
    Export App for Vercel
 ======================= */
 module.exports = app;
 
 /* =======================
-   Local server for testing
+   Local server (development only)
 ======================= */
 if (require.main === module) {
   app.listen(PORT, () => {
