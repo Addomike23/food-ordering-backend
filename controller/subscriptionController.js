@@ -8,6 +8,7 @@ const Subscription = require("../model/subscription");
 ========================= */
 const subscribeMails = async (req, res) => {
   try {
+    /* Ensure DB connection */
     await connectDB();
 
     const { email } = req.body;
@@ -36,17 +37,15 @@ const subscribeMails = async (req, res) => {
     /* Save subscription FIRST */
     await Subscription.create({ email });
 
-    /* Send welcome email (non-blocking) */
-    transporter.sendMail({
-      from: process.env.EMAIL,
+    /* Send welcome email (awaited for Vercel reliability) */
+    await transporter.sendMail({
+      from: `"Naya Success Axis" <${process.env.EMAIL}>`,
       to: email,
-      subject: "Welcome to Success Axis Foods!",
+      subject: "Welcome to Naya Success Axis",
       attachments: [
         {
           filename: "logo.jpg",
-          path: encodeURI(
-            "https://res.cloudinary.com/dro9wcugg/image/upload/v1765573840/products/b87coh3o8fxagorzbgtq.jpg"
-          ),
+          path: "https://res.cloudinary.com/dro9wcugg/image/upload/v1765573840/products/b87coh3o8fxagorzbgtq.jpg",
           cid: "banner"
         }
       ],
@@ -56,101 +55,63 @@ const subscribeMails = async (req, res) => {
             font-family: Arial, sans-serif; color: #333333;
             border: 1px solid #e6e6e6;">
 
-  <!-- Logo -->
   <div style="text-align: center; padding: 28px 16px;">
     <img src="cid:banner" alt="Naya Success Axis"
-         style="
-           max-width: 130px;
-           width: 100%;
-           height: auto;
-           display: inline-block;
-         ">
+         style="max-width:130px;width:100%;height:auto;">
   </div>
 
-  <!-- Title -->
   <div style="text-align: center; padding: 0 24px 20px;">
-    <h1 style="margin: 0; font-size: 24px; letter-spacing: 0.5px; color: #2e7d32;">
+    <h1 style="margin:0;font-size:24px;color:#2e7d32;">
       NAYA SUCCESS AXIS
     </h1>
-    <p style="margin-top: 6px; font-size: 14px; color: #666666;">
+    <p style="margin-top:6px;font-size:14px;color:#666;">
       Premium Pasture-Raised Poultry
     </p>
   </div>
 
-  <!-- Body -->
-  <div style="padding: 24px 28px; font-size: 15px; line-height: 1.7;">
-    <p style="margin-top: 0;">
-      Welcome, and thank you for subscribing to <strong>Naya Success Axis</strong>.
-    </p>
+  <div style="padding:24px 28px;font-size:15px;line-height:1.7;">
+    <p>Welcome, and thank you for subscribing to <strong>Naya Success Axis</strong>.</p>
+    <p>Since <strong>2018</strong>, we have been committed to delivering responsibly raised, high-quality poultry.</p>
 
-    <p>
-      Since <strong>2018</strong>, we have been committed to delivering
-      responsibly raised, high-quality poultry products you can trust.
-    </p>
-
-    <p>
-      As a subscriber, you will receive:
-    </p>
-
-    <ul style="padding-left: 18px; color: #444444;">
+    <ul>
       <li>Farm updates and product availability</li>
       <li>Seasonal promotions and discounts</li>
       <li>Poultry care tips and cooking inspiration</li>
     </ul>
 
-    <!-- CTA -->
-    <div style="text-align: center; margin: 32px 0;">
+    <div style="text-align:center;margin:30px 0;">
       <a href="https://nayaaxisfoods.vercel.app/products"
-         style="
-           background: #2e7d32;
-           color: #ffffff;
-           padding: 12px 28px;
-           text-decoration: none;
-           font-size: 15px;
-           border-radius: 6px;
-           display: inline-block;
-         ">
+         style="background:#2e7d32;color:#fff;padding:12px 28px;
+                text-decoration:none;border-radius:6px;">
         Visit Our Shop
       </a>
     </div>
-
-    <p style="font-size: 14px; color: #666666;">
-      If you have any questions, feel free to reach out.
-      We are always happy to assist you.
-    </p>
   </div>
 
-  <!-- Footer -->
-  <div style="background: #f8f8f8; padding: 16px;
-              text-align: center; font-size: 12px; color: #777777;">
-    <p style="margin: 0;">
-      Naya Success Axis • Started 2018
-    </p>
-    <p style="margin-top: 6px;">
-      <a href="mailto:nayasuccessaxis@gmail.com" style="color: #2e7d32;">
-        Contact
-      </a>
-      &nbsp;|&nbsp;
-      <a href="https://nayaaxisfoods.vercel.app/unsubscribe" style="color: #2e7d32;">
-        Unsubscribe
-      </a>
+  <div style="background:#f8f8f8;padding:16px;text-align:center;
+              font-size:12px;color:#777;">
+    <p style="margin:0;">Naya Success Axis • Started 2018</p>
+    <p style="margin-top:6px;">
+      <a href="mailto:nayasuccessaxis@gmail.com" style="color:#2e7d32;">Contact</a> |
+      <a href="https://nayaaxisfoods.vercel.app/unsubscribe" style="color:#2e7d32;">Unsubscribe</a>
     </p>
   </div>
-
 </div>
 `
+    });
 
-
-    }).catch(() => { }); // ensure email failures do not crash API
-
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Thanks for subscribing"
     });
+
   } catch (error) {
-    res.status(500).json({
+    console.error("Subscription error:", error);
+
+    return res.status(500).json({
       success: false,
-      message: error.message
+      message: "Subscription failed",
+      error: error.message
     });
   }
 };
