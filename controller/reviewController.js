@@ -32,13 +32,12 @@ const createReview = async (req, res) => {
   try {
     await connectDB();
 
-    const { name, email, content, role, rating } = req.body;
+    const { name, email, content, rating } = req.body;
 
     const { error } = reviewValidator.validate({
       name,
       email,
       content,
-      role,
       rating
     });
 
@@ -64,8 +63,8 @@ const createReview = async (req, res) => {
     // ✅ Save to DB FIRST
     const newReview = await reviewModel.create({
       name,
+      email,
       content,
-      role,
       rating,
       avatar: upload.secure_url,
       public_id: upload.public_id
@@ -94,7 +93,7 @@ const createReview = async (req, res) => {
               <img src="cid:avatar" style="width:55px;height:55px;border-radius:50%;margin-right:14px"/>
               <div>
                 <strong>${name}</strong><br/>
-                <small>${role}</small>
+                
               </div>
             </div>
             <div style="color:#FFC107;font-size:18px;margin-bottom:12px">

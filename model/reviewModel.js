@@ -7,20 +7,14 @@ const reviewSchema = new mongoose.Schema({
         type: String,
         require: true
     },
-    content: {
+    email: {
         type: String,
         require: true
     },
-    role: {
-        type: String,
-        require: true
-    },
+    content: {type: String, require: true},
+
     rating: {type: Number, require: true},
     avatar: {
-        type: String,
-        require: true
-    },
-    location: {
         type: String,
         require: true
     }

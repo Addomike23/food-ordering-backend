@@ -1,5 +1,5 @@
 const joi = require('joi');
-const { removeListener } = require('../model/productModel');
+
 
 
 // Validation schema using Joi
@@ -63,18 +63,10 @@ const reviewValidator = joi.object({
         "string.empty": "Please provide your message",
         "any.required": "Message is required"
     }),
-    role: joi.string().required().messages({
-        "string.empty": "Please provide your message",
-        "any.required": "Position is required"
-    }),
     rating: joi.number().required().messages({
         "number.empty": "Please choose rating number",
         "any.required": "Position is required"
-    }),
-    // location: joi.string().required().messages({
-    //     "string.empty": "Please provide your location",
-    //     "any.required": "Location is required"
-    // })
+    })
 })
 // staff validator
 const staffValidator = joi.object({

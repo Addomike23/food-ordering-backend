@@ -25,7 +25,7 @@ app.use(helmet());
    CORS Configuration
 ======================= */
 const allowedOrigins = [
-  "https://portryfarm.vercel.app"
+  "https://nayaaxisfoods.vercel.app/"
 ];
 
 app.use(
