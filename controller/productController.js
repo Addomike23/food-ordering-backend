@@ -37,10 +37,12 @@ exports.createProduct = async (req, res) => {
   try {
     await connectDB();
 
-    const { title, category, description, price } = req.body;
+    const { name, status, size, category, description, price } = req.body;
 
     const { error } = productValidator.validate({
-      title,
+      name,
+      status,
+      size,
       category,
       description,
       price
@@ -76,7 +78,9 @@ exports.createProduct = async (req, res) => {
     );
 
     const newProduct = await productModel.create({
-      title,
+      name,
+      status,
+      size,
       category,
       description,
       price,
@@ -130,10 +134,12 @@ exports.updateProduct = async (req, res) => {
   try {
     await connectDB();
 
-    const { title, category, description, price } = req.body;
+    const { name, status, size, category, description, price } = req.body;
 
     const { error } = productValidator.validate({
-      title,
+      name,
+      status,
+      size,
       category,
       description,
       price
@@ -156,7 +162,7 @@ exports.updateProduct = async (req, res) => {
 
     if (req.file && req.file.buffer) {
       if (public_id) {
-        await cloudinary.uploader.destroy(public_id).catch(() => {});
+        await cloudinary.uploader.destroy(public_id).catch(() => { });
       }
 
       const upload = await uploadBufferToCloudinary(
@@ -171,7 +177,9 @@ exports.updateProduct = async (req, res) => {
     const updatedProduct = await productModel.findByIdAndUpdate(
       req.params.id,
       {
-        title,
+        name,
+        status,
+        size,
         category,
         description,
         price,
@@ -208,7 +216,7 @@ exports.deleteProduct = async (req, res) => {
     }
 
     if (productDoc.public_id) {
-      await cloudinary.uploader.destroy(productDoc.public_id).catch(() => {});
+      await cloudinary.uploader.destroy(productDoc.public_id).catch(() => { });
     }
 
     await productDoc.deleteOne();

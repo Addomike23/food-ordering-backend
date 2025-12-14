@@ -17,7 +17,15 @@ const productSchema = new mongoose.Schema({
         type: String,
         require: true
     },
-    title: {
+    name: {
+        type: String,
+        require: true
+    },
+    status: {
+        type: String,
+        require: true
+    },
+    size: {
         type: String,
         require: true
     },

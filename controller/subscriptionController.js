@@ -34,8 +34,7 @@ const subscribeMails = async (req, res) => {
       });
     }
 
-    /* Save subscription FIRST */
-    await Subscription.create({ email });
+    
 
     /* Send welcome email (awaited for Vercel reliability) */
     await transporter.sendMail({
@@ -99,6 +98,11 @@ const subscribeMails = async (req, res) => {
 </div>
 `
     });
+
+    /* Save subscription FIRST */
+     await Subscription.create({
+      email: email
+    })
 
     return res.status(201).json({
       success: true,
