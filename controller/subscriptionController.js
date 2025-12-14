@@ -4,62 +4,23 @@ const { subscriberMail } = require("../middleware/validator");
 const Subscription = require("../model/subscription");
 
 /* =========================
-   SUBSCRIBE EMAIL
+   EMAIL TEMPLATE
 ========================= */
-const subscribeMails = async (req, res) => {
-  try {
-    /* Ensure DB connection */
-    await connectDB();
+const subscriptionTemplate = () => `
+<div style="max-width:620px;margin:auto;background:#ffffff;
+            border-radius:8px;overflow:hidden;
+            font-family:Arial,sans-serif;color:#333;
+            border:1px solid #e6e6e6;">
 
-    const { email } = req.body;
-
-    /* Validate email */
-    const { error } = subscriberMail.validate({ email });
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        message: error.details[0].message
-      });
-    }
-
-    /* Check if already subscribed */
-    const alreadySubscribed = await Subscription
-      .findOne({ email })
-      .lean();
-
-    if (alreadySubscribed) {
-      return res.status(409).json({
-        success: false,
-        message: "Email already subscribed"
-      });
-    }
-
-    
-
-    /* Send welcome email (awaited for Vercel reliability) */
-    await transporter.sendMail({
-      from: `"Naya Success Axis" <${process.env.EMAIL}>`,
-      to: email,
-      subject: "Welcome to Naya Success Axis",
-      attachments: [
-        {
-          filename: "logo.jpg",
-          path: "https://res.cloudinary.com/dro9wcugg/image/upload/v1765573840/products/b87coh3o8fxagorzbgtq.jpg",
-          cid: "banner"
-        }
-      ],
-      html: `
-<div style="max-width: 620px; margin: auto; background: #ffffff;
-            border-radius: 8px; overflow: hidden;
-            font-family: Arial, sans-serif; color: #333333;
-            border: 1px solid #e6e6e6;">
-
-  <div style="text-align: center; padding: 28px 16px;">
-    <img src="cid:banner" alt="Naya Success Axis"
-         style="max-width:130px;width:100%;height:auto;">
+  <div style="text-align:center;padding:28px 16px;">
+    <img 
+      src="https://res.cloudinary.com/dro9wcugg/image/upload/v1765573840/products/b87coh3o8fxagorzbgtq.jpg"
+      alt="Naya Success Axis"
+      style="max-width:130px;width:100%;height:auto;"
+    />
   </div>
 
-  <div style="text-align: center; padding: 0 24px 20px;">
+  <div style="text-align:center;padding:0 24px 20px;">
     <h1 style="margin:0;font-size:24px;color:#2e7d32;">
       NAYA SUCCESS AXIS
     </h1>
@@ -69,8 +30,15 @@ const subscribeMails = async (req, res) => {
   </div>
 
   <div style="padding:24px 28px;font-size:15px;line-height:1.7;">
-    <p>Welcome, and thank you for subscribing to <strong>Naya Success Axis</strong>.</p>
-    <p>Since <strong>2018</strong>, we have been committed to delivering responsibly raised, high-quality poultry.</p>
+    <p>
+      Welcome, and thank you for subscribing to
+      <strong>Naya Success Axis</strong>.
+    </p>
+
+    <p>
+      Since <strong>2018</strong>, we have been committed to delivering
+      responsibly raised, high-quality poultry products you can trust.
+    </p>
 
     <ul>
       <li>Farm updates and product availability</li>
@@ -91,31 +59,66 @@ const subscribeMails = async (req, res) => {
               font-size:12px;color:#777;">
     <p style="margin:0;">Naya Success Axis • Started 2018</p>
     <p style="margin-top:6px;">
-      <a href="mailto:nayasuccessaxis@gmail.com" style="color:#2e7d32;">Contact</a> |
-      <a href="https://nayaaxisfoods.vercel.app/unsubscribe" style="color:#2e7d32;">Unsubscribe</a>
+      <a href="mailto:nayasuccessaxis@gmail.com" style="color:#2e7d32;">
+        Contact
+      </a> |
+      <a href="https://nayaaxisfoods.vercel.app/unsubscribe" style="color:#2e7d32;">
+        Unsubscribe
+      </a>
     </p>
   </div>
 </div>
-`
-    });
+`;
 
-    /* Save subscription FIRST */
-     await Subscription.create({
-      email: email
-    })
+/* =========================
+   SUBSCRIBE CONTROLLER
+========================= */
+const subscribeMails = async (req, res) => {
+  try {
+    await connectDB();
+
+    const { email } = req.body;
+
+    /* Validate input */
+    const { error } = subscriberMail.validate({ email });
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
+    }
+
+    /* Prevent duplicates */
+    const exists = await Subscription.findOne({ email }).lean();
+    if (exists) {
+      return res.status(409).json({
+        success: false,
+        message: "Email already subscribed"
+      });
+    }
+
+    /* Persist first (source of truth) */
+    await Subscription.create({ email });
+
+    /* Send email (safe for Vercel) */
+    await transporter.sendMail({
+      from: `"Naya Success Axis" <${process.env.EMAIL}>`,
+      to: email,
+      subject: "Welcome to Naya Success Axis",
+      html: subscriptionTemplate()
+    });
 
     return res.status(201).json({
       success: true,
       message: "Thanks for subscribing"
     });
 
-  } catch (error) {
-    console.error("Subscription error:", error);
+  } catch (err) {
+    console.error("Subscription error:", err);
 
     return res.status(500).json({
       success: false,
-      message: "Subscription failed",
-      error: error.message
+      message: "Subscription failed"
     });
   }
 };
