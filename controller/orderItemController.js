@@ -2,9 +2,11 @@ const orderModel = require("../model/orderModel");
 const { orderValidator } = require("../middleware/validator");
 const transporter = require("../middleware/nodemailer");
 const crypto = require("crypto");
+const connectDB = require('../utils/connectDB')
 
 const createOrder = async (req, res) => {
     try {
+        await connectDB()
         // 1. Validate request body
         const { error, value } = orderValidator.validate(req.body, { abortEarly: false });
         if (error) {
