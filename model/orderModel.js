@@ -22,7 +22,7 @@ const orderSchema = new mongoose.Schema({
         category: { type: String }
     }]
 
-})
+},{timestamps: true})
 
 const orderModel = mongoose.model("client-order", orderSchema)
 module.exports = orderModel

@@ -93,4 +93,29 @@ const createOrder = async (req, res) => {
     }
 };
 
-module.exports = {createOrder}
+const getOrders = async (req, res) => {
+  try {
+    await connectDB();
+
+    const orders = await orderModel
+      .find({})
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders",
+      error: error.message
+    });
+  }
+};
+
+
+module.exports = {createOrder, getOrders}
