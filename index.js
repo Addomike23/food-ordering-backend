@@ -9,6 +9,7 @@ const staffRouter = require("./router/staffRoute");
 const reviewRouter = require("./router/reviewRoute");
 const heroMessage = require("./json/heroMessage.json");
 const contactRoute = require("./router/contactRoute");
+const orderRouter = require('./router/orderRoutes')
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -80,7 +81,7 @@ app.use("/", productRouter);
 app.use("/", staffRouter);
 app.use("/", reviewRouter);
 app.use("/", contactRoute);
-
+app.use('/', orderRouter)
 /* =======================
    Export App for Vercel
 ======================= */

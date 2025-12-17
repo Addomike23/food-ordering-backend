@@ -70,7 +70,7 @@ const reviewValidator = joi.object({
 })
 // staff validator
 const staffValidator = joi.object({
-     position: joi.string().min(2).max(100),
+    position: joi.string().min(2).max(100),
     title: joi.string().min(5).max(200),
 })
 
@@ -84,5 +84,30 @@ const productValidator = joi.object({
     description: joi.string().min(10).max(500)
 }).min(1); // at least one field required
 
+// Order validator
 
-module.exports = {staffValidator, subscriberMail, productValidator ,messageValidator, reviewValidator, blogValidator, allowedUpdateSchema }
+const orderValidator = joi.object({
+    customerInfo: joi.object({
+        name: joi.string().min(2).required(),
+        phone: joi.string().min(8).required(),
+        email: joi.string().email().optional(),
+        address: joi.string().allow("").optional(),
+        deliveryType: joi.string().valid("pickup", "delivery").default("pickup"),
+        paymentMethod: joi.string().default("cash"),
+    }).required(),
+
+    items: joi.array().items(
+        joi.object({
+            productId: joi.string().required(),
+            name: joi.string().required(),
+            price: joi.number().positive().required(),
+            quantity: joi.number().integer().positive().required(),
+            totalPrice: joi.number().positive().required(),
+            images: joi.array().items(joi.string().uri()).optional(),
+            category: joi.string().optional(),
+        })
+    ).min(1).required(),
+});
+
+
+module.exports = { orderValidator, staffValidator, subscriberMail, productValidator, messageValidator, reviewValidator, blogValidator, allowedUpdateSchema }
