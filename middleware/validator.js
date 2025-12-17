@@ -72,6 +72,7 @@ const reviewValidator = joi.object({
 const staffValidator = joi.object({
     position: joi.string().min(2).max(100),
     title: joi.string().min(5).max(200),
+    bio: joi.string().min(5).max(500)
 })
 
 // product Validator

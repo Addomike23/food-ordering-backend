@@ -36,9 +36,9 @@ const createStaff = async (req, res) => {
   try {
     await connectDB();
 
-    const { title, position } = req.body;
+    const { title, position, bio } = req.body;
 
-    const { error } = staffValidator.validate({ title, position });
+    const { error } = staffValidator.validate({ title, position, bio });
     if (error) {
       return res.status(400).json({
         success: false,
@@ -74,6 +74,7 @@ const createStaff = async (req, res) => {
     const newStaff = await staffModel.create({
       title,
       position,
+      bio,
       image: upload.secure_url,
       public_id: upload.public_id,
       imageHash
@@ -117,6 +118,98 @@ const getStaff = async (req, res) => {
   }
 };
 
+
+// === Update Staff
+const updateStaff = async (req, res) => {
+  try {
+    await connectDB();
+
+    const { id } = req.params;
+    const { title, position, bio } = req.body;
+
+    // Validate text fields (allow partial update)
+    const { error } = staffValidator.validate(
+      { title, position, bio },
+      { allowUnknown: true }
+    );
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
+    }
+
+    // Find existing staff
+    const staff = await staffModel.findById(id);
+    if (!staff) {
+      return res.status(404).json({
+        success: false,
+        message: "Staff not found"
+      });
+    }
+
+    let updatedData = {
+      title: title ?? staff.title,
+      position: position ?? staff.position,
+      boi: bio ?? staff.bio
+    };
+
+    // If a new image is uploaded
+    if (req.file && req.file.buffer) {
+      const imageHash = generateImageHash(req.file.buffer);
+
+      // Prevent duplicate image usage
+      const existingStaff = await staffModel.findOne({
+        imageHash,
+        _id: { $ne: id }
+      });
+
+      if (existingStaff) {
+        return res.status(409).json({
+          success: false,
+          message: "Another staff member already uses this image"
+        });
+      }
+
+      // Delete old image from Cloudinary
+      if (staff.public_id) {
+        await deleteFromCloudinary(staff.public_id);
+      }
+
+      // Upload new image
+      const upload = await uploadBufferToCloudinary(
+        req.file.buffer,
+        "staff"
+      );
+
+      updatedData.image = upload.secure_url;
+      updatedData.public_id = upload.public_id;
+      updatedData.imageHash = imageHash;
+    }
+
+    const updatedStaff = await staffModel.findByIdAndUpdate(
+      id,
+      updatedData,
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Staff updated successfully",
+      staff: updatedStaff
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error updating staff",
+      error: error.message
+    });
+  }
+};
+
+
 /* =========================
    DELETE STAFF
 ========================= */
@@ -149,6 +242,7 @@ const deleteStaff = async (req, res) => {
 
 module.exports = {
   createStaff,
+  updateStaff,
   getStaff,
   deleteStaff
 };

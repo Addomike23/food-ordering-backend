@@ -72,8 +72,8 @@ const createOrder = async (req, res) => {
 
         // 5. Send email to company
         await transporter.sendMail({
-            from: `"Website Orders" <${process.env.COMPANY_EMAIL}>`,
-            to: process.env.COMPANY_EMAIL,
+            from: `"Website Orders" <${process.env.EMAIL}>`,
+            to: process.env.EMAIL,
             subject: `New Order - ${order.orderNumber}`,
             html: mailHtml,
         });

@@ -21,6 +21,10 @@ const staffSchema = new mongoose.Schema({
         type: String,
         require: true
     },
+    bio: {
+        type: String,
+        require: true
+    },
     datePublished: {
         type: Date, default: Date.now,
         required: true
