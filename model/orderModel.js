@@ -20,7 +20,8 @@ const orderSchema = new mongoose.Schema({
         totalPrice: { type: Number, required: true },
         images: [{ type: String }], // supports single or multiple images
         category: { type: String }
-    }]
+    }],
+    
 
 },{timestamps: true})
 

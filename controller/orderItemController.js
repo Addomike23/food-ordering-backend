@@ -4,6 +4,9 @@ const transporter = require("../middleware/nodemailer");
 const crypto = require("crypto");
 const connectDB = require('../utils/connectDB')
 
+
+
+// CREATE ORDER
 const createOrder = async (req, res) => {
   try {
     await connectDB();
@@ -108,13 +111,69 @@ const createOrder = async (req, res) => {
     // ===============================
     // ADMIN EMAIL
     // ===============================
-    const adminHtml = `
-      <h2>New Order Received</h2>
-      <p><strong>Order:</strong> ${order.orderNumber}</p>
-      <p><strong>Customer:</strong> ${order.customerInfo.name}</p>
-      <p><strong>Phone:</strong> ${order.customerInfo.phone}</p>
-      <p><strong>Total:</strong> ₵${subtotal}</p>
-    `;
+  const adminHtml = `
+  <h2 style="margin-bottom:10px;">New Order Received</h2>
+
+  <table width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;margin-bottom:15px;">
+    <tr>
+      <td><strong>Order Number:</strong></td>
+      <td>${order.orderNumber}</td>
+    </tr>
+    <tr>
+      <td><strong>Customer:</strong></td>
+      <td>${order.customerInfo.name}</td>
+    </tr>
+    <tr>
+      <td><strong>Phone:</strong></td>
+      <td>${order.customerInfo.phone}</td>
+    </tr>
+    <tr>
+      <td><strong>Email:</strong></td>
+      <td>${order.customerInfo.email || "N/A"}</td>
+    </tr>
+  </table>
+
+  <h3 style="margin:10px 0;">Ordered Items</h3>
+
+  <table width="100%" cellpadding="8" cellspacing="0" 
+    style="border-collapse:collapse;border:1px solid #ddd;">
+    
+    <thead>
+      <tr style="background:#f5f5f5;">
+        <th align="left" style="border:1px solid #ddd;">Image</th>
+        <th align="left" style="border:1px solid #ddd;">Product</th>
+        <th align="center" style="border:1px solid #ddd;">Qty</th>
+        <th align="right" style="border:1px solid #ddd;">Price</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      ${order.items
+        .map(
+          (item) => `
+          <tr>
+            <td style="border:1px solid #ddd;">
+              <img 
+                src="${item.image}" 
+                alt="${item.name}" 
+                width="60" 
+                style="display:block;border-radius:4px;"
+              />
+            </td>
+            <td style="border:1px solid #ddd;">${item.name}</td>
+            <td align="center" style="border:1px solid #ddd;">${item.quantity}</td>
+            <td align="right" style="border:1px solid #ddd;">
+              ₵${item.price * item.quantity}
+            </td>
+          </tr>
+        `
+        )
+        .join("")}
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:15px;">Order Total: ₵${subtotal}</h3>
+`;
 
     // ===============================
     // SEND EMAILS
@@ -153,6 +212,8 @@ const createOrder = async (req, res) => {
   }
 };
 
+
+// GET ALL
 const getOrders = async (req, res) => {
   try {
     await connectDB();
