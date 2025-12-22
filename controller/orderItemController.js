@@ -5,6 +5,12 @@ const crypto = require("crypto");
 const connectDB = require('../utils/connectDB')
 
 
+
+
+const MAX_ATTACHMENTS = 5;
+const MAX_TOTAL_MB = 5;
+const CLOUDINARY_MAX_WIDTH = 400;
+
 const createOrder = async (req, res) => {
   try {
     await connectDB();
@@ -40,7 +46,7 @@ const createOrder = async (req, res) => {
     });
 
     // ===============================
-    // 4. SUBTOTAL (SERVER TRUST)
+    // 4. SUBTOTAL
     // ===============================
     const subtotal = order.items.reduce(
       (sum, item) => sum + item.price * item.quantity,
@@ -48,43 +54,49 @@ const createOrder = async (req, res) => {
     );
 
     // ===============================
-    // 5. IMAGE NORMALIZER (17 DEC FIX)
+    // 5. IMAGE NORMALIZER
     // ===============================
     const normalizeImage = (image) => {
-      if (!image) {
-        return "https://res.cloudinary.com/demo/image/upload/v1690000000/placeholder.png";
+      if (!image || !image.includes("res.cloudinary.com")) {
+        return "https://res.cloudinary.com/demo/image/upload/w_400,q_auto/placeholder.png";
       }
 
-      if (image.startsWith("https://")) return image;
-      if (image.startsWith("res.cloudinary.com")) return `https://${image}`;
-
-      return "https://res.cloudinary.com/demo/image/upload/v1690000000/placeholder.png";
+      return image.replace(
+        "/upload/",
+        `/upload/w_${CLOUDINARY_MAX_WIDTH},q_auto/`
+      );
     };
 
     // ===============================
-    // 6. BUILD ATTACHMENTS (NO AXIOS)
+    // 6. BUILD ADMIN ATTACHMENTS
     // ===============================
-    const attachments = order.items.map((item, index) => ({
-      filename: `${item.name.replace(/\s+/g, "_")}-${index + 1}.jpg`,
-      path: normalizeImage(item.image), // 🔑 nodemailer fetches it
-    }));
+    let totalEstimatedMb = 0;
+    const attachments = [];
+
+    for (let i = 0; i < order.items.length; i++) {
+      if (attachments.length >= MAX_ATTACHMENTS) break;
+
+      const estimatedMb = 0.15;
+      if (totalEstimatedMb + estimatedMb > MAX_TOTAL_MB) break;
+
+      attachments.push({
+        filename: `${order.items[i].name.replace(/\s+/g, "_")}-${i + 1}.jpg`,
+        path: normalizeImage(order.items[i].image),
+      });
+
+      totalEstimatedMb += estimatedMb;
+    }
 
     // ===============================
-    // 7. ADMIN ITEMS TABLE (TEXT ONLY)
+    // 7. ADMIN ITEMS TABLE (TEXT)
     // ===============================
     const adminItemsHtml = order.items
       .map(
         item => `
         <tr>
-          <td style="border:1px solid #ddd;padding:6px;">
-            ${item.name}
-          </td>
-          <td align="center" style="border:1px solid #ddd;padding:6px;">
-            ${item.quantity}
-          </td>
-          <td align="right" style="border:1px solid #ddd;padding:6px;">
-            ₵${(item.price * item.quantity).toFixed(2)}
-          </td>
+          <td>${item.name}</td>
+          <td align="center">${item.quantity}</td>
+          <td align="right">₵${(item.price * item.quantity).toFixed(2)}</td>
         </tr>
       `
       )
@@ -101,12 +113,9 @@ const createOrder = async (req, res) => {
       <p><strong>Phone:</strong> ${order.customerInfo.phone}</p>
       <p><strong>Email:</strong> ${order.customerInfo.email || "N/A"}</p>
 
-      <h3>Ordered Items</h3>
-
-      <table width="100%" cellpadding="8" cellspacing="0"
-        style="border-collapse:collapse;border:1px solid #ddd;">
+      <table border="1" cellpadding="6" cellspacing="0" width="100%">
         <thead>
-          <tr style="background:#f5f5f5;">
+          <tr>
             <th>Product</th>
             <th>Qty</th>
             <th>Total</th>
@@ -117,28 +126,23 @@ const createOrder = async (req, res) => {
         </tbody>
       </table>
 
-      <h3 style="margin-top:15px;">
-        Order Total: ₵${subtotal.toFixed(2)}
-      </h3>
-
-      <p>
-        <em>Product images are attached to this email.</em>
-      </p>
+      <h3>Order Total: ₵${subtotal.toFixed(2)}</h3>
+      <p><em>Product images are attached.</em></p>
     `;
 
     // ===============================
-    // 9. SEND ADMIN MAIL (WITH IMAGES)
+    // 9. SEND ADMIN EMAIL (WITH ATTACHMENTS)
     // ===============================
     await transporter.sendMail({
       from: `"Website Orders" <${process.env.EMAIL}>`,
       to: process.env.EMAIL,
       subject: `New Order - ${order.orderNumber}`,
       html: adminHtml,
-      attachments, // ✅ 17 DEC WORKING METHOD
+      attachments,
     });
 
     // ===============================
-    // 10. CUSTOMER RECEIPT (NO IMAGES)
+    // 10. CUSTOMER EMAIL (NO ATTACHMENTS)
     // ===============================
     if (order.customerInfo.email) {
       await transporter.sendMail({
