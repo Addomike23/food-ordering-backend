@@ -14,7 +14,7 @@ const subscriptionTemplate = () => `
 
   <div style="text-align:center;padding:28px 16px;">
     <img 
-      src="https://res.cloudinary.com/dro9wcugg/image/upload/v1765573840/products/b87coh3o8fxagorzbgtq.jpg"
+      src="https://res.cloudinary.com/dro9wcugg/image/upload/v1766427631/WhatsApp_Image_2025-12-11_at_09.58.23_e0ae07b7_u6qw3k.jpg"
       alt="Naya Success Axis"
       style="max-width:130px;width:100%;height:auto;"
     />
