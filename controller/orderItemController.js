@@ -4,6 +4,7 @@ const transporter = require("../middleware/nodemailer");
 const crypto = require("crypto");
 const connectDB = require('../utils/connectDB')
 
+
 const createOrder = async (req, res) => {
   try {
     await connectDB();
@@ -39,7 +40,7 @@ const createOrder = async (req, res) => {
     });
 
     // ===============================
-    // 4. SUBTOTAL (DO NOT TRUST CLIENT)
+    // 4. SUBTOTAL (SERVER TRUST)
     // ===============================
     const subtotal = order.items.reduce(
       (sum, item) => sum + item.price * item.quantity,
@@ -49,40 +50,32 @@ const createOrder = async (req, res) => {
     // ===============================
     // 5. IMAGE NORMALIZER (17 DEC FIX)
     // ===============================
-    const getImageUrl = (image) => {
+    const normalizeImage = (image) => {
       if (!image) {
         return "https://res.cloudinary.com/demo/image/upload/v1690000000/placeholder.png";
       }
 
-      // Already a Cloudinary HTTPS URL
-      if (image.startsWith("https://res.cloudinary.com")) {
-        return image;
-      }
+      if (image.startsWith("https://")) return image;
+      if (image.startsWith("res.cloudinary.com")) return `https://${image}`;
 
-      // Cloudinary but missing protocol
-      if (image.startsWith("res.cloudinary.com")) {
-        return `https://${image}`;
-      }
-
-      // Anything else → fallback
       return "https://res.cloudinary.com/demo/image/upload/v1690000000/placeholder.png";
     };
 
     // ===============================
-    // 6. ADMIN ITEMS TABLE (WITH FIXED IMAGES)
+    // 6. BUILD ATTACHMENTS (NO AXIOS)
+    // ===============================
+    const attachments = order.items.map((item, index) => ({
+      filename: `${item.name.replace(/\s+/g, "_")}-${index + 1}.jpg`,
+      path: normalizeImage(item.image), // 🔑 nodemailer fetches it
+    }));
+
+    // ===============================
+    // 7. ADMIN ITEMS TABLE (TEXT ONLY)
     // ===============================
     const adminItemsHtml = order.items
-      .map(item => `
+      .map(
+        item => `
         <tr>
-          <td style="border:1px solid #ddd;padding:6px;">
-            <img
-              src="${getImageUrl(item.image)}"
-              alt="${item.name}"
-              width="60"
-              height="60"
-              style="display:block;border-radius:6px;object-fit:cover;"
-            />
-          </td>
           <td style="border:1px solid #ddd;padding:6px;">
             ${item.name}
           </td>
@@ -93,11 +86,12 @@ const createOrder = async (req, res) => {
             ₵${(item.price * item.quantity).toFixed(2)}
           </td>
         </tr>
-      `)
+      `
+      )
       .join("");
 
     // ===============================
-    // 7. ADMIN EMAIL
+    // 8. ADMIN EMAIL
     // ===============================
     const adminHtml = `
       <h2>New Order Received</h2>
@@ -113,7 +107,6 @@ const createOrder = async (req, res) => {
         style="border-collapse:collapse;border:1px solid #ddd;">
         <thead>
           <tr style="background:#f5f5f5;">
-            <th>Image</th>
             <th>Product</th>
             <th>Qty</th>
             <th>Total</th>
@@ -127,20 +120,25 @@ const createOrder = async (req, res) => {
       <h3 style="margin-top:15px;">
         Order Total: ₵${subtotal.toFixed(2)}
       </h3>
+
+      <p>
+        <em>Product images are attached to this email.</em>
+      </p>
     `;
 
     // ===============================
-    // 8. SEND ADMIN MAIL
+    // 9. SEND ADMIN MAIL (WITH IMAGES)
     // ===============================
     await transporter.sendMail({
       from: `"Website Orders" <${process.env.EMAIL}>`,
       to: process.env.EMAIL,
       subject: `New Order - ${order.orderNumber}`,
       html: adminHtml,
+      attachments, // ✅ 17 DEC WORKING METHOD
     });
 
     // ===============================
-    // 9. CUSTOMER RECEIPT (NO IMAGES)
+    // 10. CUSTOMER RECEIPT (NO IMAGES)
     // ===============================
     if (order.customerInfo.email) {
       await transporter.sendMail({
