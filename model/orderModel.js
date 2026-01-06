@@ -4,6 +4,24 @@ const mongoose = require('mongoose')
 // Order model example
 const orderSchema = new mongoose.Schema({
     orderNumber: { type: String, required: true, unique: true },
+    status: {
+        type: String,
+        enum: [
+            'pending',
+            'confirmed',
+            'preparing',
+            'ready',
+            'out_for_delivery',
+            'completed',
+            'cancelled'
+        ],
+        default: 'pending'
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'paid', 'failed', 'refunded'],
+        default: 'pending'
+    },
     customerInfo: {
         name: { type: String, required: true },
         phone: { type: String, required: true },
@@ -21,9 +39,9 @@ const orderSchema = new mongoose.Schema({
         images: [{ type: String }], // supports single or multiple images
         category: { type: String }
     }],
-    
 
-},{timestamps: true})
+
+}, { timestamps: true })
 
 const orderModel = mongoose.model("client-order", orderSchema)
 module.exports = orderModel
