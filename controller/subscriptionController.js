@@ -36,7 +36,7 @@ const subscriptionTemplate = () => `
     </p>
 
     <p>
-      Since <strong>2018</strong>, we have been committed to delivering
+      Since <strong>2017</strong>, we have been committed to delivering
       responsibly raised, high-quality poultry products you can trust.
     </p>
 
