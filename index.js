@@ -24,7 +24,7 @@ app.use(express.urlencoded({ extended: true }));
    CORS Configuration
 ======================= */
 const allowedOrigins = [
-  "https://nayasuccessaxis.com"
+  "https://www.nayasuccessaxis.com"
 ];
 
 app.use(
