@@ -24,7 +24,7 @@ app.use(express.urlencoded({ extended: true }));
    CORS Configuration
 ======================= */
 const allowedOrigins = [
-  "https://nayaaxisfoods.vercel.app"
+  "https://nayasuccessaxis.com"
 ];
 
 app.use(
