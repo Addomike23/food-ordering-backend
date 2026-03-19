@@ -83,7 +83,7 @@ const createOrder = async (req, res) => {
               <tr style="background:#f2f2f2">
                 <th style="padding:8px;text-align:left">Product</th>
                 <th style="padding:8px;text-align:center">Qty</th>
-                <th style="padding:8px;text-align:right">Total</th>
+            
               </tr>
             </thead>
             <tbody>
@@ -135,7 +135,7 @@ const createOrder = async (req, res) => {
                 <tr style="background:#f2f2f2">
                   <th style="padding:8px;text-align:left">Product</th>
                   <th style="padding:8px;text-align:center">Qty</th>
-                  <th style="padding:8px;text-align:right">Total</th>
+                 
                 </tr>
               </thead>
               <tbody>
@@ -143,7 +143,7 @@ const createOrder = async (req, res) => {
               </tbody>
             </table>
 
-            <h3 style="margin-top:16px;text-align:right">Total: ₵${subtotal.toFixed(2)}</h3>
+
           </div>
         </div>
       `;
