@@ -60,7 +60,7 @@ const createOrder = async (req, res) => {
           ${item.name}
         </td>
         <td style="padding:8px;text-align:center">${item.quantity}</td>
-        <td style="padding:8px;text-align:right">₵${item.totalPrice.toFixed(2)}</td>
+       
       </tr>
     `).join("");
 
@@ -91,7 +91,7 @@ const createOrder = async (req, res) => {
             </tbody>
           </table>
 
-          <h3 style="margin-top:16px;text-align:right">Order Total: ₵${subtotal.toFixed(2)}</h3>
+
         </div>
       </div>
     `;
@@ -117,7 +117,7 @@ const createOrder = async (req, res) => {
             ${item.name}
           </td>
           <td style="padding:8px;text-align:center">${item.quantity}</td>
-          <td style="padding:8px;text-align:right">₵${item.totalPrice.toFixed(2)}</td>
+         
         </tr>
       `).join("");
 
