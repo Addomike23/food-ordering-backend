@@ -1,6 +1,4 @@
-const mongoose = require('mongoose')
-
-// product model for DB
+const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
     public_id: { type: String },
@@ -11,38 +9,50 @@ const productSchema = new mongoose.Schema({
     },
     image: {
         type: String,
-        require: true
+        required: true
     },
     category: {
         type: String,
-        require: true
+        required: true
     },
     name: {
         type: String,
-        require: true
+        required: true,
+        unique: true // Prevent duplicate product names
     },
     status: {
         type: String,
-        require: true
+        required: true,
+        enum: ['available', 'out_of_stock', 'coming_soon'],
+        default: 'available'
     },
     size: {
         type: String,
-        require: true
+        required: true
     },
     description: {
         type: String,
-        require: true
+        required: true
     },
     price: {
-        type: String,
-        require: true
+        type: Number,  // ✅ FIXED: Changed from String to Number
+        required: true,
+        min: 0
+    },
+    // For recommendation engine
+    popularityScore: {
+        type: Number,
+        default: 0
+    },
+    timesOrdered: {
+        type: Number,
+        default: 0
     },
     datePublished: {
-        type: Date, default: Date.now,
+        type: Date, 
+        default: Date.now,
         required: true
     }
+}, { timestamps: true });
 
-}, { timestamps: true })
-
-const productModel = mongoose.model('product', productSchema)
-module.exports = productModel
+module.exports = mongoose.model('product', productSchema);

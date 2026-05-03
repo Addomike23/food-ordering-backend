@@ -78,7 +78,7 @@ const staffValidator = joi.object({
 // product Validator
 const productValidator = joi.object({
     category: joi.string().min(2).max(100),
-    price: joi.string().min(2).max(100),
+    price: joi.number().min(0).max(10000),
     name: joi.string().min(2).max(200),
     status: joi.string().min(2).max(200),
     size: joi.string().min(2).max(200),
