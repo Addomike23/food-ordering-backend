@@ -234,12 +234,10 @@ const logout = async (req, res) => {
       if (decoded && decoded.exp) {
         const expiresAt = new Date(decoded.exp * 1000);
         
-        // Store token in blacklist database
-        await BlacklistedToken.create({
-          token,
-          expiresAt,
-          userId: req.user?.id
-        });
+        // Use the addToBlacklist method which handles duplicates
+        await BlacklistedToken.addToBlacklist(token, expiresAt, req.user?.id);
+        
+        console.log(`✅ Token blacklisted for user: ${req.user?.id}`);
       }
     }
     
@@ -250,6 +248,15 @@ const logout = async (req, res) => {
     
   } catch (error) {
     console.error("Logout error:", error);
+    
+    // Don't fail if token already blacklisted
+    if (error.code === 11000) {
+      return res.status(200).json({
+        success: true,
+        message: "Already logged out"
+      });
+    }
+    
     res.status(500).json({
       success: false,
       message: "Logout failed",
@@ -263,8 +270,7 @@ const logout = async (req, res) => {
  */
 const isTokenBlacklisted = async (token) => {
   try {
-    const blacklisted = await BlacklistedToken.findOne({ token });
-    return !!blacklisted;
+    return await BlacklistedToken.isBlacklisted(token);
   } catch (error) {
     console.error("Check blacklist error:", error);
     return false;
