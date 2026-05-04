@@ -1,10 +1,10 @@
 const orderModel = require("../model/orderModel");
+const productModel = require("../model/productModel"); // ✅ ADD THIS - was missing!
 const { orderValidator } = require("../middleware/validator");
 const transporter = require("../middleware/nodemailer");
 const crypto = require("crypto");
 const connectDB = require('../utils/connectDB');
 const recommendationEngine = require('../services/recommendationEngine');
-
 
 const createOrder = async (req, res) => {
   try {
@@ -47,7 +47,7 @@ const createOrder = async (req, res) => {
     });
 
     // ===============================
-    // 4.5 UPDATE PRODUCT POPULARITY (NEW!)
+    // 4.5 UPDATE PRODUCT POPULARITY
     // ===============================
     for (const item of normalizedItems) {
       if (item.productId) {
@@ -63,11 +63,11 @@ const createOrder = async (req, res) => {
     console.log(`📊 Updated popularity for ${normalizedItems.length} products`);
 
     // ===============================
-    // 5. CALCULATE TOTALS
+    // 5. CALCULATE TOTALS (GHS CURRENCY)
     // ===============================
     const subtotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0);
-    const deliveryFee = order.customerInfo.deliveryType === 'delivery' ? 1500 : 0;
-    const tax = subtotal * 0.05; // 5% tax
+    const deliveryFee = order.customerInfo.deliveryType === 'delivery' ? 15 : 0; // GHS 15
+    const tax = subtotal * 0.025; // 2.5% tax
     const totalAmount = subtotal + deliveryFee + tax;
 
     // ===============================
@@ -86,10 +86,10 @@ const createOrder = async (req, res) => {
           ${item.quantity}
         </td>
         <td style="padding: 12px; vertical-align: middle; text-align: right;">
-          ₦${(item.price).toLocaleString()}
+          GH₵${(item.price).toFixed(2)}
         </td>
         <td style="padding: 12px; vertical-align: middle; text-align: right;">
-          <strong>₦${(item.totalPrice).toLocaleString()}</strong>
+          <strong>GH₵${(item.totalPrice).toFixed(2)}</strong>
         </td>
       </tr>
     `).join("");
@@ -107,7 +107,7 @@ const createOrder = async (req, res) => {
         <div style="max-width: 800px; margin: 20px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
           
           <!-- Header -->
-          <div style="background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%); padding: 30px 20px; text-align: center;">
+          <div style="background: linear-gradient(135deg, #1b5e20 0%, #2d6a4f 100%); padding: 30px 20px; text-align: center;">
             <h1 style="margin: 0; color: #ffffff; font-size: 28px;">🛍️ New Order Received</h1>
             <p style="margin: 10px 0 0; color: #e8f5e9; font-size: 16px;">Order #${order.orderNumber}</p>
           </div>
@@ -130,7 +130,7 @@ const createOrder = async (req, res) => {
                 <tr>
                   <td style="padding: 5px 0;"><strong>Email:</strong></td>
                   <td>${order.customerInfo.email}</td>
-                </td>
+                </tr>
                 ` : ''}
                 <tr>
                   <td style="padding: 5px 0;"><strong>Delivery Type:</strong></td>
@@ -146,7 +146,7 @@ const createOrder = async (req, res) => {
                   <td style="padding: 5px 0;"><strong>Payment Method:</strong></td>
                   <td>${order.customerInfo.paymentMethod === 'cash' ? '💵 Cash on Delivery' : '💳 Card Payment'}</td>
                 </tr>
-              80cean
+              20cean
             </div>
             
             <!-- Order Items Section -->
@@ -167,22 +167,22 @@ const createOrder = async (req, res) => {
               <tfoot>
                 <tr style="background: #f8f9fa;">
                   <td colspan="4" style="padding: 12px; text-align: right;"><strong>Subtotal:</strong></td>
-                  <td style="padding: 12px; text-align: right;">₦${subtotal.toLocaleString()}</td>
+                  <td style="padding: 12px; text-align: right;">GH₵${subtotal.toFixed(2)}</strong></td>
                 </tr>
                 <tr style="background: #f8f9fa;">
                   <td colspan="4" style="padding: 12px; text-align: right;"><strong>Delivery Fee:</strong></td>
-                  <td style="padding: 12px; text-align: right;">₦${deliveryFee.toLocaleString()}</td>
+                  <td style="padding: 12px; text-align: right;">GH₵${deliveryFee.toFixed(2)}</strong></td>
                 </tr>
                 <tr style="background: #f8f9fa;">
-                  <td colspan="4" style="padding: 12px; text-align: right;"><strong>Tax (5%):</strong></td>
-                  <td style="padding: 12px; text-align: right;">₦${tax.toLocaleString()}</td>
+                  <td colspan="4" style="padding: 12px; text-align: right;"><strong>Tax (2.5%):</strong></td>
+                  <td style="padding: 12px; text-align: right;">GH₵${tax.toFixed(2)}</strong></td>
                 </tr>
-                <tr style="background: #1b5e20; color: #ffffff;">
+                <tr style="background: linear-gradient(135deg, #1b5e20 0%, #2d6a4f 100%); color: #ffffff;">
                   <td colspan="4" style="padding: 15px; text-align: right;"><strong style="font-size: 16px;">TOTAL:</strong></td>
-                  <td style="padding: 15px; text-align: right;"><strong style="font-size: 18px;">₦${totalAmount.toLocaleString()}</strong></td>
+                  <td style="padding: 15px; text-align: right;"><strong style="font-size: 18px;">GH₵${totalAmount.toFixed(2)}</strong></td>
                 </tr>
               </tfoot>
-            </table>
+            20cean
             
             <!-- Action Button -->
             <div style="text-align: center; margin-top: 30px;">
@@ -221,7 +221,7 @@ const createOrder = async (req, res) => {
         <tr style="border-bottom: 1px solid #e0e0e0;">
           <td style="padding: 12px; vertical-align: middle; width: 80px;">
             ${item.images.map(img => `<img src="${img}" width="60" height="60" style="object-fit: cover; border-radius: 8px;" />`).join('')}
-          </td>
+          </tr>
           <td style="padding: 12px; vertical-align: middle;">
             <strong>${item.name}</strong><br/>
             <span style="color: #666; font-size: 12px;">${item.category || 'Food Item'}</span>
@@ -230,10 +230,10 @@ const createOrder = async (req, res) => {
             ${item.quantity}
           </td>
           <td style="padding: 12px; vertical-align: middle; text-align: right;">
-            ₦${(item.price).toLocaleString()}
+            GH₵${(item.price).toFixed(2)}
           </td>
           <td style="padding: 12px; vertical-align: middle; text-align: right;">
-            <strong>₦${(item.totalPrice).toLocaleString()}</strong>
+            <strong>GH₵${(item.totalPrice).toFixed(2)}</strong>
           </td>
         </tr>
       `).join("");
@@ -308,19 +308,19 @@ const createOrder = async (req, res) => {
                 <tfoot>
                   <tr style="background: #f8f9fa;">
                     <td colspan="4" style="padding: 12px; text-align: right;"><strong>Subtotal:</strong></td>
-                    <td style="padding: 12px; text-align: right;">₦${subtotal.toLocaleString()}</td>
+                    <td style="padding: 12px; text-align: right;">GH₵${subtotal.toFixed(2)}</strong></td>
                   </tr>
                   <tr style="background: #f8f9fa;">
                     <td colspan="4" style="padding: 12px; text-align: right;"><strong>Delivery Fee:</strong></td>
-                    <td style="padding: 12px; text-align: right;">₦${deliveryFee.toLocaleString()}</td>
+                    <td style="padding: 12px; text-align: right;">GH₵${deliveryFee.toFixed(2)}</strong></td>
                   </tr>
                   <tr style="background: #f8f9fa;">
-                    <td colspan="4" style="padding: 12px; text-align: right;"><strong>Tax (5%):</strong></td>
-                    <td style="padding: 12px; text-align: right;">₦${tax.toLocaleString()}</td>
+                    <td colspan="4" style="padding: 12px; text-align: right;"><strong>Tax (2.5%):</strong></td>
+                    <td style="padding: 12px; text-align: right;">GH₵${tax.toFixed(2)}</strong></td>
                   </tr>
-                  <tr style="background: #ff6b35; color: #ffffff;">
+                  <tr style="background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); color: #ffffff;">
                     <td colspan="4" style="padding: 15px; text-align: right;"><strong style="font-size: 16px;">TOTAL AMOUNT:</strong></td>
-                    <td style="padding: 15px; text-align: right;"><strong style="font-size: 20px;">₦${totalAmount.toLocaleString()}</strong></td>
+                    <td style="padding: 15px; text-align: right;"><strong style="font-size: 20px;">GH₵${totalAmount.toFixed(2)}</strong></td>
                   </tr>
                 </tfoot>
               20cean
@@ -345,7 +345,7 @@ const createOrder = async (req, res) => {
               <div style="text-align: center; margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 8px;">
                 <p style="margin: 0; color: #666; font-size: 14px;">
                   ⏰ <strong>Estimated Processing Time:</strong> 30-45 minutes<br/>
-                  📞 <strong>Need help?</strong> Contact us at ${process.env.SUPPORT_PHONE || '+234 XXX XXX XXXX'}
+                  📞 <strong>Need help?</strong> Contact us at ${process.env.SUPPORT_PHONE || '+233 XXX XXX XXXX'}
                 </p>
               </div>
             </div>
@@ -373,10 +373,8 @@ const createOrder = async (req, res) => {
     // ===============================
     const socketService = req.app.get('socketService');
     if (socketService) {
-      // Emit to all connected restaurant dashboards
       socketService.emitNewOrder(order);
 
-      // If customer has an active socket connection, send confirmation
       if (order.customerInfo.phone) {
         socketService.notifyUser(order.customerInfo.phone, 'order-confirmation', {
           orderNumber: order.orderNumber,
@@ -400,9 +398,8 @@ const createOrder = async (req, res) => {
     }
 
     // ===============================
-    // 10. RETURN RESPONSE WITH RECOMMENDATIONS (OPTIONAL)
+    // 10. RETURN RESPONSE WITH RECOMMENDATIONS
     // ===============================
-    // Get personalized recommendations for the customer
     let recommendations = [];
     try {
       recommendations = await recommendationEngine.getPersonalizedRecommendations(
@@ -427,7 +424,7 @@ const createOrder = async (req, res) => {
         totalAmount: totalAmount,
         createdAt: order.createdAt
       },
-      recommendations: recommendations // Send recommendations with order response
+      recommendations: recommendations
     });
 
   } catch (err) {
@@ -440,7 +437,9 @@ const createOrder = async (req, res) => {
   }
 };
 
+// ===============================
 // GET ALL ORDERS
+// ===============================
 const getOrders = async (req, res) => {
   try {
     await connectDB();
@@ -457,6 +456,7 @@ const getOrders = async (req, res) => {
     });
 
   } catch (error) {
+    console.error("Get orders error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch orders",
@@ -465,7 +465,42 @@ const getOrders = async (req, res) => {
   }
 };
 
+// ===============================
+// GET SINGLE ORDER BY ORDER NUMBER
+// ===============================
+const getOrderByNumber = async (req, res) => {
+  try {
+    await connectDB();
+    
+    const { orderNumber } = req.params;
+    
+    const order = await orderModel.findOne({ orderNumber }).lean();
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      order
+    });
+    
+  } catch (error) {
+    console.error("Get order by number error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch order",
+      error: error.message
+    });
+  }
+};
+
+// ===============================
 // DELETE ALL ORDERS
+// ===============================
 const deleteAllOrders = async (req, res) => {
   try {
     await connectDB();
@@ -479,6 +514,7 @@ const deleteAllOrders = async (req, res) => {
     });
 
   } catch (error) {
+    console.error("Delete all orders error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to delete all orders",
@@ -487,4 +523,9 @@ const deleteAllOrders = async (req, res) => {
   }
 };
 
-module.exports = { createOrder, getOrders, deleteAllOrders };
+module.exports = { 
+  createOrder, 
+  getOrders, 
+  getOrderByNumber,
+  deleteAllOrders 
+};
