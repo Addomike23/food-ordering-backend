@@ -57,7 +57,8 @@ app.use(helmet()); // Security headers
 ======================= */
 const allowedOrigins = [
   "https://www.nayasuccessaxis.com",
-  "https://foodorderio.vercel.app"
+  "https://foodorderio.vercel.app",
+  "http://localhost:5173"
 ];
 
 app.use(
