@@ -5,6 +5,26 @@ const { reviewValidator } = require("../middleware/validator");
 const transporter = require("../middleware/nodemailer");
 
 /* =========================
+   Helper: Render Star Rating with Emojis
+========================= */
+function renderStarRating(rating) {
+  const fullStar = "⭐";
+  const emptyStar = "☆";
+  return fullStar.repeat(rating) + emptyStar.repeat(5 - rating);
+}
+
+function renderStarRatingText(rating) {
+  const stars = {
+    5: "⭐⭐⭐⭐⭐ (Excellent!)",
+    4: "⭐⭐⭐⭐ (Very Good)",
+    3: "⭐⭐⭐ (Good)",
+    2: "⭐⭐ (Fair)",
+    1: "⭐ (Poor)"
+  };
+  return stars[rating] || "⭐⭐⭐ (Good)";
+}
+
+/* =========================
    Cloudinary Upload Helper
 ========================= */
 function uploadBufferToCloudinary(buffer, folder = "reviews") {
@@ -69,7 +89,7 @@ const createReview = async (req, res) => {
       avatar: upload.secure_url
     });
 
-    // ✅ Send PROFESSIONAL ADMIN EMAIL
+    // ✅ Send PROFESSIONAL ADMIN EMAIL with proper star emojis
     await transporter.sendMail({
       from: `"Foodie Customer Reviews" <${process.env.EMAIL}>`,
       to: process.env.ADMIN_EMAIL || process.env.EMAIL,
@@ -116,16 +136,16 @@ const createReview = async (req, res) => {
                 </div>
               </div>
               
-              <!-- Rating Section -->
+              <!-- Rating Section with EMOJI STARS -->
               <div style="text-align: center; padding: 20px; background: #fff9f0; border-radius: 16px; margin-bottom: 25px;">
                 <div style="font-size: 48px; letter-spacing: 4px; margin-bottom: 10px;">
-                  ${"★".repeat(rating)}${"☆".repeat(5 - rating)}
+                  ${renderStarRating(rating)}
                 </div>
                 <div style="font-size: 24px; font-weight: 700; color: #ff6b35;">
                   ${rating}.0 / 5.0
                 </div>
-                <div style="font-size: 13px; color: #888; margin-top: 8px;">
-                  ${rating === 5 ? 'Excellent! ⭐⭐⭐⭐⭐' : rating === 4 ? 'Very Good 👍' : rating === 3 ? 'Good 👌' : rating === 2 ? 'Needs Improvement 📝' : 'Poor 😞'}
+                <div style="font-size: 14px; color: #888; margin-top: 8px;">
+                  ${renderStarRatingText(rating)}
                 </div>
               </div>
               
@@ -163,73 +183,82 @@ const createReview = async (req, res) => {
       `
     });
 
-    // ✅ Send CONFIRMATION EMAIL TO CUSTOMER
-    await transporter.sendMail({
-      from: `"Foodie Team" <${process.env.EMAIL}>`,
-      to: email,
-      subject: `Thank You for Your Review, ${name}! 🍔`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Thank You for Your Review</title>
-        </head>
-        <body style="margin: 0; padding: 0; background: #f5f5f5; font-family: 'Segoe UI', Arial, sans-serif;">
-          <div style="max-width: 550px; margin: 40px auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08);">
-            
-            <!-- Header -->
-            <div style="background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); padding: 35px 25px; text-align: center;">
-              <div style="font-size: 56px; margin-bottom: 10px;">🙏</div>
-              <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 600;">Thank You, ${name}!</h1>
-              <p style="margin: 10px 0 0; color: #fff3e0; font-size: 15px;">Your review helps us serve you better</p>
-            </div>
-            
-            <!-- Content -->
-            <div style="padding: 30px;">
-              <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Dear <strong>${name}</strong>,</p>
+    // ✅ Send CONFIRMATION EMAIL TO CUSTOMER (with proper star emojis)
+    if (email && email !== process.env.ADMIN_EMAIL) {
+      await transporter.sendMail({
+        from: `"Foodie Team" <${process.env.EMAIL}>`,
+        to: email,
+        subject: `Thank You for Your Review, ${name}! 🍔`,
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Thank You for Your Review</title>
+            <style>
+              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+              * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+            </style>
+          </head>
+          <body style="margin: 0; padding: 0; background: #f5f5f5;">
+            <div style="max-width: 550px; margin: 40px auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08);">
               
-              <p style="font-size: 14px; color: #555; line-height: 1.6;">Thank you for taking the time to share your feedback about Foodie. We truly appreciate your honest review!</p>
+              <!-- Header -->
+              <div style="background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); padding: 35px 25px; text-align: center;">
+                <div style="font-size: 56px; margin-bottom: 10px;">🙏</div>
+                <h1 style="margin: 0; color: #ffffff; font-size: 26px; font-weight: 600;">Thank You, ${name}!</h1>
+                <p style="margin: 10px 0 0; color: #fff3e0; font-size: 15px;">Your review helps us serve you better</p>
+              </div>
               
-              <!-- Review Summary -->
-              <div style="background: #f8faf8; padding: 20px; border-radius: 16px; margin: 25px 0; text-align: center;">
-                <div style="font-size: 42px; letter-spacing: 3px; margin-bottom: 10px;">
-                  ${"★".repeat(rating)}${"☆".repeat(5 - rating)}
+              <!-- Content -->
+              <div style="padding: 30px;">
+                <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Dear <strong>${name}</strong>,</p>
+                
+                <p style="font-size: 14px; color: #555; line-height: 1.6;">Thank you for taking the time to share your feedback about Foodie. We truly appreciate your honest review!</p>
+                
+                <!-- Review Summary with EMOJI STARS -->
+                <div style="background: #f8faf8; padding: 20px; border-radius: 16px; margin: 25px 0; text-align: center;">
+                  <div style="font-size: 48px; letter-spacing: 3px; margin-bottom: 10px;">
+                    ${renderStarRating(rating)}
+                  </div>
+                  <div style="font-size: 18px; font-weight: 600; color: #ff6b35; margin-bottom: 5px;">
+                    ${rating}.0 / 5.0
+                  </div>
+                  <div style="font-size: 14px; color: #666;">${renderStarRatingText(rating)}</div>
                 </div>
-                <div style="font-size: 14px; color: #666;">Your ${rating}-star rating</div>
+                
+                <div style="background: #fff9f0; padding: 16px; border-radius: 12px; margin: 20px 0;">
+                  <p style="margin: 0; color: #555; font-style: italic; line-height: 1.5;">"${content}"</p>
+                </div>
+                
+                <!-- Special Offer -->
+                <div style="background: linear-gradient(135deg, #1a472a 0%, #2d6a4f 100%); padding: 20px; border-radius: 16px; margin: 25px 0; text-align: center;">
+                  <div style="font-size: 32px; margin-bottom: 10px;">🎁</div>
+                  <h3 style="color: #fff; margin: 0 0 8px;">Special Thank You Gift!</h3>
+                  <p style="color: #d4e6d4; margin: 0 0 15px;">Use code: <strong style="font-size: 20px;">FOODIE10</strong> for 10% off your next order</p>
+                  <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/menu" 
+                     style="background: #ff6b35; color: #fff; padding: 10px 25px; text-decoration: none; border-radius: 25px; display: inline-block;">
+                    Order Now →
+                  </a>
+                </div>
+                
+                <p style="font-size: 13px; color: #999; text-align: center; margin-top: 20px;">
+                  Your feedback makes Foodie better every day. Thank you for being part of our community!<br/>
+                  Questions? Contact us at ${process.env.SUPPORT_PHONE || '+233 XXX XXX XXXX'}
+                </p>
               </div>
               
-              <div style="background: #fff9f0; padding: 16px; border-radius: 12px; margin: 20px 0;">
-                <p style="margin: 0; color: #555; font-style: italic; line-height: 1.5;">"${content}"</p>
+              <!-- Footer -->
+              <div style="background: #1a472a; padding: 20px; text-align: center;">
+                <p style="margin: 0; color: #d4e6d4; font-size: 12px;">© ${new Date().getFullYear()} Foodie - Delicious Meals, Happy Customers</p>
               </div>
-              
-              <!-- Special Offer -->
-              <div style="background: linear-gradient(135deg, #1a472a 0%, #2d6a4f 100%); padding: 20px; border-radius: 16px; margin: 25px 0; text-align: center;">
-                <div style="font-size: 32px; margin-bottom: 10px;">🎁</div>
-                <h3 style="color: #fff; margin: 0 0 8px;">Special Thank You Gift!</h3>
-                <p style="color: #d4e6d4; margin: 0 0 15px;">Use code: <strong style="font-size: 20px;">FOODIE10</strong> for 10% off your next order</p>
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/menu" 
-                   style="background: #ff6b35; color: #fff; padding: 10px 25px; text-decoration: none; border-radius: 25px; display: inline-block;">
-                  Order Now →
-                </a>
-              </div>
-              
-              <p style="font-size: 13px; color: #999; text-align: center; margin-top: 20px;">
-                Your feedback makes Foodie better every day. Thank you for being part of our community!<br/>
-                Questions? Contact us at ${process.env.SUPPORT_PHONE || '+233 XXX XXX XXXX'}
-              </p>
             </div>
-            
-            <!-- Footer -->
-            <div style="background: #1a472a; padding: 20px; text-align: center;">
-              <p style="margin: 0; color: #d4e6d4; font-size: 12px;">© ${new Date().getFullYear()} Foodie - Delicious Meals, Happy Customers</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `
-    });
+          </body>
+          </html>
+        `
+      });
+    }
 
     res.status(201).json({
       success: true,

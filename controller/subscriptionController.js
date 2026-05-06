@@ -4,70 +4,118 @@ const { subscriberMail } = require("../middleware/validator");
 const Subscription = require("../model/subscription");
 
 /* =========================
-   EMAIL TEMPLATE
+   EMAIL TEMPLATE - FOODIE BRANDING
 ========================= */
-const subscriptionTemplate = () => `
-<div style="max-width:620px;margin:auto;background:#ffffff;
-            border-radius:8px;overflow:hidden;
-            font-family:Arial,sans-serif;color:#333;
-            border:1px solid #e6e6e6;">
-
-  <div style="text-align:center;padding:28px 16px;">
-    <img 
-      src="https://res.cloudinary.com/dro9wcugg/image/upload/v1766427631/WhatsApp_Image_2025-12-11_at_09.58.23_e0ae07b7_u6qw3k.jpg"
-      alt="Naya Success Axis"
-      style="max-width:130px;width:100%;height:auto;"
-    />
+const subscriptionTemplate = (name = "Food Lover") => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Foodie</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background: #f5f5f5;">
+  <div style="max-width: 550px; margin: 40px auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08);">
+    
+    <!-- Header with Foodie Brand -->
+    <div style="background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); padding: 35px 25px; text-align: center;">
+      <div style="font-size: 56px; margin-bottom: 10px;">🍔</div>
+      <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">Welcome to Foodie!</h1>
+      <p style="margin: 10px 0 0; color: #fff3e0; font-size: 15px;">Delicious meals delivered to your doorstep</p>
+    </div>
+    
+    <!-- Content -->
+    <div style="padding: 30px;">
+      <p style="font-size: 16px; color: #333; margin-bottom: 20px;">Dear <strong>${name}</strong>,</p>
+      
+      <p style="font-size: 14px; color: #555; line-height: 1.6;">Thank you for subscribing to <strong style="color: #ff6b35;">Foodie</strong>! You're now part of our food-loving community.</p>
+      
+      <div style="background: #fff9f0; padding: 20px; border-radius: 16px; margin: 25px 0; text-align: center;">
+        <div style="font-size: 32px; margin-bottom: 10px;">🎁</div>
+        <h3 style="color: #ff6b35; margin: 0 0 8px;">Welcome Gift!</h3>
+        <p style="color: #555; margin: 0 0 15px;">Use code: <strong style="font-size: 20px; color: #ff6b35;">FOODIE15</strong> for 15% off your first order</p>
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/menu" 
+           style="background: #ff6b35; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 30px; display: inline-block; font-weight: 500;">
+          Order Now →
+        </a>
+      </div>
+      
+      <h3 style="color: #1a472a; font-size: 16px; margin: 20px 0 10px;">What You'll Get:</h3>
+      <ul style="color: #555; line-height: 1.8; padding-left: 20px;">
+        <li>🔥 Exclusive deals and discounts</li>
+        <li>🍕 New menu item announcements</li>
+        <li>🚀 Special birthday rewards</li>
+        <li>📝 Cooking tips and recipes</li>
+      </ul>
+      
+      <div style="background: #f8faf8; padding: 15px; border-radius: 12px; margin: 25px 0; display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 32px;">⭐</span>
+        <div>
+          <div style="font-weight: 600; color: #1a472a;">Rated 4.8/5 by Customers</div>
+          <div style="font-size: 13px; color: #666;">"Best food delivery experience!"</div>
+        </div>
+      </div>
+      
+      <p style="font-size: 13px; color: #999; text-align: center; margin-top: 20px;">
+        We're excited to serve you the most delicious meals.<br/>
+        Questions? Contact us at ${process.env.SUPPORT_PHONE || '+233 XXX XXX XXXX'}
+      </p>
+    </div>
+    
+    <!-- Footer -->
+    <div style="background: #1a472a; padding: 20px; text-align: center;">
+      <p style="margin: 0 0 10px; color: #d4e6d4; font-size: 12px;">
+        🍔 Foodie - Delicious Meals, Happy Customers
+      </p>
+      <p style="margin: 0;">
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/unsubscribe" style="color: #ff8c42; text-decoration: none; font-size: 12px;">
+          Unsubscribe
+        </a>
+      </p>
+      <p style="margin: 10px 0 0; color: #88b388; font-size: 11px;">
+        © ${new Date().getFullYear()} Foodie. All rights reserved.
+      </p>
+    </div>
   </div>
+</body>
+</html>
+`;
 
-  <div style="text-align:center;padding:0 24px 20px;">
-    <h1 style="margin:0;font-size:24px;color:#2e7d32;">
-      NAYA SUCCESS AXIS
-    </h1>
-    <p style="margin-top:6px;font-size:14px;color:#666;">
-      Premium Pasture-Raised Poultry
-    </p>
-  </div>
-
-  <div style="padding:24px 28px;font-size:15px;line-height:1.7;">
-    <p>
-      Welcome, and thank you for subscribing to
-      <strong>Naya Success Axis</strong>.
-    </p>
-
-    <p>
-      Since <strong>2017</strong>, we have been committed to delivering
-      responsibly raised, high-quality poultry products you can trust.
-    </p>
-
-    <ul>
-      <li>Farm updates and product availability</li>
-      <li>Seasonal promotions and discounts</li>
-      <li>Poultry care tips and cooking inspiration</li>
-    </ul>
-
-    <div style="text-align:center;margin:30px 0;">
-      <a href="https://nayaaxisfoods.vercel.app/"
-         style="background:#2e7d32;color:#fff;padding:12px 28px;
-                text-decoration:none;border-radius:6px;">
-        Visit Our Shop
+/* =========================
+   ADMIN NOTIFICATION TEMPLATE
+========================= */
+const adminNotificationTemplate = (email) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Subscriber</title>
+</head>
+<body style="margin: 0; padding: 0; background: #f5f5f5; font-family: 'Segoe UI', Arial, sans-serif;">
+  <div style="max-width: 500px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.05);">
+    <div style="background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%); padding: 25px; text-align: center;">
+      <div style="font-size: 40px;">📧</div>
+      <h2 style="margin: 10px 0 0; color: #fff;">New Subscriber!</h2>
+    </div>
+    <div style="padding: 25px;">
+      <p style="font-size: 16px; color: #333;">Someone just subscribed to Foodie!</p>
+      <div style="background: #f5f5f5; padding: 15px; border-radius: 10px; margin: 20px 0;">
+        <p style="margin: 0;"><strong>Email:</strong> ${email}</p>
+        <p style="margin: 10px 0 0;"><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+      </div>
+      <a href="${process.env.ADMIN_PANEL_URL || 'http://localhost:5000/admin/subscribers'}" 
+         style="background: #ff6b35; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 25px; display: inline-block;">
+        View All Subscribers
       </a>
     </div>
   </div>
-
-  <div style="background:#f8f8f8;padding:16px;text-align:center;
-              font-size:12px;color:#777;">
-    <p style="margin:0;">Naya Success Axis • Started 2018</p>
-    <p style="margin-top:6px;">
-      <a href="mailto:nayasuccessaxis@gmail.com" style="color:#2e7d32;">
-        Contact
-      </a> |
-      <a href="https://nayaaxisfoods.vercel.app/unsubscribe" style="color:#2e7d32;">
-        Unsubscribe
-      </a>
-    </p>
-  </div>
-</div>
+</body>
+</html>
 `;
 
 /* =========================
@@ -77,7 +125,7 @@ const subscribeMails = async (req, res) => {
   try {
     await connectDB();
 
-    const { email } = req.body;
+    const { email, name } = req.body;
 
     /* Validate input */
     const { error } = subscriberMail.validate({ email });
@@ -98,19 +146,27 @@ const subscribeMails = async (req, res) => {
     }
 
     /* Persist first (source of truth) */
-    await Subscription.create({ email });
+    await Subscription.create({ email, name: name || "Food Lover" });
 
-    /* Send email (safe for Vercel) */
+    /* ✅ Send WELCOME EMAIL TO CUSTOMER (SUBSCRIBER) */
     await transporter.sendMail({
-      from: `"Naya Success Axis" <${process.env.EMAIL}>`,
-      to: email,
-      subject: "Welcome to Naya Success Axis",
-      html: subscriptionTemplate()
+      from: `"Foodie Team" <${process.env.EMAIL}>`,
+      to: email,  // 👈 Customer receives this email
+      subject: "Welcome to Foodie! 🍔 Get 15% Off Your First Order",
+      html: subscriptionTemplate(name || email.split('@')[0])
+    });
+
+    /* ✅ Send NOTIFICATION TO ADMIN (optional) */
+    await transporter.sendMail({
+      from: `"Foodie Subscriptions" <${process.env.EMAIL}>`,
+      to: process.env.ADMIN_EMAIL || process.env.EMAIL,
+      subject: "📧 New Subscriber Joined Foodie",
+      html: adminNotificationTemplate(email)
     });
 
     return res.status(201).json({
       success: true,
-      message: "Thanks for subscribing"
+      message: "Thanks for subscribing! Check your email for your welcome gift 🎁"
     });
 
   } catch (err) {
@@ -118,7 +174,7 @@ const subscribeMails = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: "Subscription failed"
+      message: "Subscription failed. Please try again."
     });
   }
 };
