@@ -1,28 +1,36 @@
 {
   "heroMessages": [
     {
-      "title": "NAYA SUCCESS AXIS",
-      "description": "Experience quality eggs, meats and chicks nurtured with care and delivered to you."
+      "title": "FOODIE - Delicious Meals Delivered",
+      "description": "Satisfy your cravings with our mouth-watering burgers, pizzas, and local favourites, delivered hot and fresh to your doorstep."
     },
     {
-      "title": "Premium Poultry Services",
-      "description": "We provide healthy livestock and reliable delivery for farms and homes."
+      "title": "Taste the Best Burgers in Town",
+      "description": "Juicy, flame-grilled burgers made with 100% beef, fresh veggies, and our secret sauce. Perfect for any craving!"
     },
     {
-      "title": "Fresh and Organic",
-      "description": "Enjoy farm-fresh products raised with the highest standards for safety and nutrition."
+      "title": "Authentic Italian Pizzas",
+      "description": "Wood-fired pizzas topped with premium ingredients, gooey mozzarella, and rich tomato sauce. Order your favourite today!"
     },
     {
-      "title": "Trusted by Farmers Nationwide",
-      "description": "Your reliable partner for poultry supply, consulting, and farm management."
+      "title": "Local Ghanaian Favourites",
+      "description": "Enjoy authentic jollof rice, waakye, banku with tilapia, and other local delights made fresh daily."
     },
     {
-      "title": "Healthy Birds, Healthy Business",
-      "description": "Our expert poultry practices ensure your birds grow strong, healthy, and productive."
+      "title": "Quick Bites & Snacks",
+      "description": "From crispy chicken wings to loaded fries and fresh spring rolls, we've got your snack cravings covered."
     },
     {
-      "title": "Sustainable Farming Solutions",
-      "description": "We combine modern poultry techniques with eco-friendly methods to support long-term growth."
+      "title": "Family Meal Deals",
+      "description": "Feed the whole family with our value-packed meal combos. Great food, great prices, and great taste!"
+    },
+    {
+      "title": "Fresh Ingredients Daily",
+      "description": "We source only the freshest ingredients to prepare every meal with love and care. Quality you can taste!"
+    },
+    {
+      "title": "Fast & Reliable Delivery",
+      "description": "Hot food delivered fast! Track your order in real-time and get notified when your food arrives."
     }
   ]
 }
