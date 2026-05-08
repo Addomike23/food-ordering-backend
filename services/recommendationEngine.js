@@ -24,43 +24,41 @@ class RecommendationEngine {
   }
 
   /**
+   * Set menu items manually (for admin)
+   */
+  setMenuItems(menuItems) {
+    this.menuItems = menuItems;
+    console.log(`✅ Manually set ${menuItems.length} menu items for recommendations`);
+  }
+
+  /**
    * Get personalized recommendations for a customer
    */
   async getPersonalizedRecommendations(customerInfo, limit = 10) {
     try {
       await connectDB();
       
-      // Ensure products are loaded
       if (this.menuItems.length === 0) {
         await this.loadProductsFromDB();
       }
       
-      // Get customer's order history
       const customerOrders = await orderModel.find({
         "customerInfo.phone": customerInfo.phone,
         status: { $in: ['completed', 'delivered', 'confirmed'] }
       }).sort({ createdAt: -1 });
 
-      // If new customer, return trending products
       if (customerOrders.length === 0) {
         console.log(`New customer ${customerInfo.phone}, showing trending products`);
         return await this.getTrendingItems(limit);
       }
 
-      // Extract preferences
       const preferences = this.extractPreferences(customerOrders);
-      
-      // Get collaborative filtering recommendations
       const collaborativeRecs = await this.getCollaborativeRecommendations(customerInfo.phone, limit);
-      
-      // Get content-based recommendations from your products
       const contentBasedRecs = this.getContentBasedRecommendations(preferences, limit);
       
-      // Merge and deduplicate
       let recommendations = [...collaborativeRecs, ...contentBasedRecs];
       recommendations = this.deduplicateRecommendations(recommendations);
       
-      // Fill with trending if needed
       if (recommendations.length < limit) {
         const trending = await this.getTrendingItems(limit - recommendations.length);
         recommendations = [...recommendations, ...trending];
@@ -85,6 +83,7 @@ class RecommendationEngine {
       totalSpent: 0,
       orderCount: orders.length,
       preferredSizes: {},
+      preferredCuisines: {},  // ✅ ADDED
       allItems: []
     };
 
@@ -100,11 +99,12 @@ class RecommendationEngine {
         itemCount++;
         totalPriceSum += item.price;
         
-        // Track favorite categories
         const category = item.category || 'Uncategorized';
         preferences.favoriteCategories[category] = (preferences.favoriteCategories[category] || 0) + item.quantity;
         
-        // Track favorite items
+        // Track cuisine based on category
+        preferences.preferredCuisines[category] = (preferences.preferredCuisines[category] || 0) + item.quantity;
+        
         preferences.favoriteItems[item.productId || item.name] = {
           name: item.name,
           count: (preferences.favoriteItems[item.productId || item.name]?.count || 0) + item.quantity,
@@ -112,12 +112,10 @@ class RecommendationEngine {
           category: category
         };
         
-        // Track preferred sizes
         if (item.size) {
           preferences.preferredSizes[item.size] = (preferences.preferredSizes[item.size] || 0) + item.quantity;
         }
         
-        // Update price range
         if (item.price < preferences.priceRange.min) preferences.priceRange.min = item.price;
         if (item.price > preferences.priceRange.max) preferences.priceRange.max = item.price;
       });
@@ -125,6 +123,7 @@ class RecommendationEngine {
 
     preferences.priceRange.avg = totalPriceSum / (itemCount || 1);
     preferences.favoriteCategories = this.sortByValue(preferences.favoriteCategories);
+    preferences.preferredCuisines = this.sortByValue(preferences.preferredCuisines);
     
     return preferences;
   }
@@ -216,7 +215,7 @@ class RecommendationEngine {
   }
 
   /**
-   * Get content-based recommendations from your product database
+   * Get content-based recommendations
    */
   getContentBasedRecommendations(preferences, limit = 10) {
     if (this.menuItems.length === 0) {
@@ -229,17 +228,14 @@ class RecommendationEngine {
     const scoredItems = this.menuItems.map(product => {
       let score = 0;
       
-      // Category match
       if (topCategories.includes(product.category)) {
         score += 15;
       }
       
-      // Size preference match
       if (topSizes.includes(product.size)) {
         score += 8;
       }
       
-      // Price range match
       const priceRatio = product.price / preferences.priceRange.avg;
       if (priceRatio >= 0.7 && priceRatio <= 1.3) {
         score += 10;
@@ -247,7 +243,6 @@ class RecommendationEngine {
         score += 5;
       }
       
-      // Popularity boost
       if (product.popularityScore) {
         score += product.popularityScore / 10;
       }
@@ -265,13 +260,12 @@ class RecommendationEngine {
   }
 
   /**
-   * Get trending products from your database
+   * Get trending items
    */
   async getTrendingItems(limit = 10) {
     try {
       await connectDB();
       
-      // First try: Get trending from orders (last 7 days)
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       
@@ -303,7 +297,6 @@ class RecommendationEngine {
         return trendingFromOrders;
       }
       
-      // Second try: Get popular from product model
       const popularProducts = await productModel
         .find({ status: 'available' })
         .sort({ timesOrdered: -1, popularityScore: -1 })
@@ -314,11 +307,7 @@ class RecommendationEngine {
         return popularProducts;
       }
       
-      // Finally: Get random available products
-      return await productModel
-        .find({ status: 'available' })
-        .limit(limit)
-        .lean();
+      return await productModel.find({ status: 'available' }).limit(limit).lean();
       
     } catch (error) {
       console.error("Trending items error:", error);
@@ -327,53 +316,112 @@ class RecommendationEngine {
   }
 
   /**
-   * Get similar products from your database
+   * Get similar items (you may also like)
    */
-  async getSimilarProducts(productId, limit = 5) {
+  getSimilarItems(item, limit = 5) {
+    if (this.menuItems.length === 0) {
+      return [];
+    }
+    
+    const similar = this.menuItems
+      .filter(menuItem => menuItem.name !== item.name)
+      .map(menuItem => {
+        let similarityScore = 0;
+        
+        if (menuItem.category === item.category) {
+          similarityScore += 30;
+        }
+        
+        const priceDiff = Math.abs(menuItem.price - item.price) / item.price;
+        if (priceDiff <= 0.2) {
+          similarityScore += 20;
+        } else if (priceDiff <= 0.5) {
+          similarityScore += 10;
+        }
+        
+        return { ...menuItem, similarityScore };
+      })
+      .filter(item => item.similarityScore > 0)
+      .sort((a, b) => b.similarityScore - a.similarityScore)
+      .slice(0, limit);
+    
+    return similar;
+  }
+
+  /**
+   * Get frequently bought together
+   */
+  async getFrequentlyBoughtTogether(itemName, limit = 5) {
     try {
       await connectDB();
       
-      const product = await productModel.findById(productId).lean();
-      if (!product) return [];
+      const ordersWithItem = await orderModel.find({
+        "items.name": itemName,
+        status: { $in: ['completed', 'delivered'] }
+      }).lean();
       
-      const similar = await productModel
-        .find({
-          _id: { $ne: productId },
-          status: 'available',
-          $or: [
-            { category: product.category },
-            { size: product.size },
-            {
-              price: {
-                $gte: product.price * 0.7,
-                $lte: product.price * 1.3
-              }
-            }
-          ]
-        })
-        .sort({ timesOrdered: -1 })
-        .limit(limit)
-        .lean();
+      const together = {};
       
-      return similar;
+      ordersWithItem.forEach(order => {
+        order.items.forEach(item => {
+          if (item.name !== itemName) {
+            together[item.name] = (together[item.name] || 0) + 1;
+          }
+        });
+      });
+      
+      return Object.entries(together)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, limit)
+        .map(([name, frequency]) => ({
+          name,
+          frequency,
+          confidence: ((frequency / ordersWithItem.length) * 100).toFixed(1)
+        }));
       
     } catch (error) {
-      console.error("Similar products error:", error);
+      console.error("Frequently bought together error:", error);
       return [];
     }
   }
 
   /**
-   * Deduplicate recommendations
+   * Get personalized offers
    */
-  deduplicateRecommendations(recommendations) {
-    const seen = new Set();
-    return recommendations.filter(rec => {
-      const id = rec._id || rec.name;
-      if (seen.has(id)) return false;
-      seen.add(id);
-      return true;
-    });
+  getPersonalizedOffers(preferences) {
+    const offers = [];
+    
+    const topCategory = Object.keys(preferences.favoriteCategories)[0];
+    if (topCategory) {
+      offers.push({
+        type: 'category',
+        title: `${topCategory} Special`,
+        description: `Get 15% off on all ${topCategory} items`,
+        discount: 15,
+        category: topCategory
+      });
+    }
+    
+    if (preferences.orderCount >= 5) {
+      offers.push({
+        type: 'loyalty',
+        title: 'Loyal Customer Reward',
+        description: 'Free delivery on your next order',
+        discount: 'free_delivery'
+      });
+    }
+    
+    if (preferences.totalSpent > 500) {
+      offers.push({
+        type: 'spending',
+        title: 'Premium Spender',
+        description: 'Get 20% off on orders above GHS 100',
+        discount: 20,
+        minOrder: 100
+      });
+    }
+    
+    return offers;
   }
 
   /**
@@ -394,6 +442,19 @@ class RecommendationEngine {
     } catch (error) {
       console.error("Update popularity error:", error);
     }
+  }
+
+  /**
+   * Deduplicate recommendations
+   */
+  deduplicateRecommendations(recommendations) {
+    const seen = new Set();
+    return recommendations.filter(rec => {
+      const id = rec._id || rec.name;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
   }
 }
 

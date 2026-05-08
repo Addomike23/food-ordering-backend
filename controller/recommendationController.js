@@ -210,22 +210,20 @@ const getPersonalizedOffers = async (req, res) => {
       });
     }
 
-    // Get customer's order history
     await connectDB();
     const customerOrders = await orderModel.find({
       "customerInfo.phone": phone,
-      status: { $in: ['completed', 'delivered'] }
+      status: { $in: ['completed', 'delivered', 'confirmed'] }
     });
 
     if (customerOrders.length === 0) {
       return res.status(200).json({
         success: true,
         offers: [],
-        message: "No offers available for new customers"
+        message: "No offers available for new customers. Start ordering to unlock rewards!"
       });
     }
 
-    // Extract preferences and get offers
     const preferences = recommendationEngine.extractPreferences(customerOrders);
     const offers = recommendationEngine.getPersonalizedOffers(preferences);
 
@@ -268,7 +266,7 @@ const getCustomerPreferences = async (req, res) => {
     await connectDB();
     const customerOrders = await orderModel.find({
       "customerInfo.phone": phone,
-      status: { $in: ['completed', 'delivered'] }
+      status: { $in: ['completed', 'delivered', 'confirmed'] }
     });
 
     if (customerOrders.length === 0) {
@@ -287,7 +285,7 @@ const getCustomerPreferences = async (req, res) => {
       preferences: {
         favoriteCategories: preferences.favoriteCategories,
         favoriteItems: Object.values(preferences.favoriteItems).slice(0, 5),
-        preferredCuisines: preferences.preferredCuisines,
+        preferredCuisines: preferences.preferredCuisines || {},
         priceRange: preferences.priceRange,
         orderCount: preferences.orderCount,
         totalSpent: preferences.totalSpent
@@ -320,16 +318,13 @@ const getHybridRecommendations = async (req, res) => {
       });
     }
 
-    // Get personalized recommendations (collaborative + content-based)
     const personalized = await recommendationEngine.getPersonalizedRecommendations(
       { phone },
       parseInt(limit)
     );
 
-    // Get trending items as fallback
     const trending = await recommendationEngine.getTrendingItems(5);
 
-    // Combine and deduplicate
     const allRecommendations = [...personalized];
     
     for (const item of trending) {
