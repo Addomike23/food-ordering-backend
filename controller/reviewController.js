@@ -167,11 +167,11 @@ const createReview = async (req, res) => {
               
               <!-- Action Buttons -->
               <div style="display: flex; gap: 12px; margin-top: 25px;">
-                <a href="${FORKSUP_URL}/admin/reviews" 
+                <a href="${FORKSUP_URL}/reviews" 
                    style="flex: 1; background: #ff6b35; color: #ffffff; padding: 12px; text-decoration: none; border-radius: 30px; text-align: center; font-weight: 500;">
                   📋 View All Reviews
                 </a>
-                <a href="${FORKSUP_URL}/reviews" 
+                <a href="${FORKSUP_URL}" 
                    style="flex: 1; background: #ff6b35; color: #ffffff; padding: 12px; text-decoration: none; border-radius: 30px; text-align: center; font-weight: 500;">
                   👀 View on Site
                 </a>
@@ -246,7 +246,7 @@ const createReview = async (req, res) => {
                   <div style="font-size: 32px; margin-bottom: 10px;">🎁</div>
                   <h3 style="color: #fff; margin: 0 0 8px;">Special Thank You Gift!</h3>
                   <p style="color: #fff3e0; margin: 0 0 15px;">Use code: <strong style="font-size: 20px;">FORKSUP15</strong> for 15% off your next order</p>
-                  <a href="${FORKSUP_URL}/menu" 
+                  <a href="${FORKSUP_URL}/products" 
                      style="background: #fff; color: #ff6b35; padding: 10px 25px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: 600;">
                     Order Now →
                   </a>
@@ -254,7 +254,7 @@ const createReview = async (req, res) => {
                 
                 <p style="font-size: 13px; color: #999; text-align: center; margin-top: 20px;">
                   Your feedback makes ${FORKSUP_NAME} better every day. Thank you for being part of our community!<br/>
-                  Questions? Contact us at ${process.env.SUPPORT_PHONE || '+233 XXX XXX XXXX'}
+                  Questions? Contact us at +233 241 609 117 or email <a href="mailto:${FORKSUP_EMAIL}" style="color: #ff6b35; text-decoration: none;">${FORKSUP_EMAIL}</a>
                 </p>
               </div>
               

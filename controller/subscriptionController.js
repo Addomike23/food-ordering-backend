@@ -44,7 +44,7 @@ const subscriptionTemplate = (name = "Food Lover") => `
         <div style="font-size: 32px; margin-bottom: 10px;">🎁</div>
         <h3 style="color: #ff6b35; margin: 0 0 8px;">Welcome Gift!</h3>
         <p style="color: #555; margin: 0 0 15px;">Use code: <strong style="font-size: 20px; color: #ff6b35;">FORKSUP15</strong> for 15% off your first order</p>
-        <a href="${FORKSUP_URL}/menu" 
+        <a href="${FORKSUP_URL}/products" 
            style="background: #ff6b35; color: #fff; padding: 12px 30px; text-decoration: none; border-radius: 30px; display: inline-block; font-weight: 500;">
           Order Now →
         </a>
