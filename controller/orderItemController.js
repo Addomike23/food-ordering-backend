@@ -6,6 +6,10 @@ const crypto = require("crypto");
 const connectDB = require('../utils/connectDB');
 const recommendationEngine = require('../services/recommendationEngine');
 
+
+// ForksUp Website URL
+const FORKSUP_URL =  'https://foodorderio.vercel.app/';
+
 const createOrder = async (req, res) => {
   try {
     await connectDB();
@@ -86,7 +90,7 @@ const createOrder = async (req, res) => {
     `).join("");
 
     // ===============================
-    // 7. ADMIN EMAIL HTML (PROFESSIONAL)
+    // 7. ADMIN EMAIL HTML (FORKS-UP BRANDING)
     // ===============================
     const adminHtml = `
       <!DOCTYPE html>
@@ -98,13 +102,14 @@ const createOrder = async (req, res) => {
       </head>
       <body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;">
         <div style="max-width:700px;margin:40px auto;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.08)">
-          <div style="background:linear-gradient(135deg,#1a472a 0%,#2d6a4f 100%);padding:35px 30px;text-align:center">
-            <h1 style="margin:0;color:#fff;font-size:28px">🛍️ New Order Received</h1>
-            <p style="margin:10px 0 0;color:#d4e6d4;font-size:16px">Order #${order.orderNumber}</p>
+          <div style="background:linear-gradient(135deg,#ff6b35 0%,#ff8c42 100%);padding:35px 30px;text-align:center">
+            <div style="font-size:48px;margin-bottom:10px;">🍽️</div>
+            <h1 style="margin:0;color:#fff;font-size:28px">ForksUp - New Order!</h1>
+            <p style="margin:10px 0 0;color:#fff3e0;font-size:16px">Order #${order.orderNumber}</p>
           </div>
           <div style="padding:30px">
             <div style="background:#f8faf8;padding:20px;border-radius:16px;margin-bottom:25px">
-              <h2 style="margin:0 0 15px 0;color:#1a472a;font-size:18px">👤 Customer Information</h2>
+              <h2 style="margin:0 0 15px 0;color:#ff6b35;font-size:18px">👤 Customer Information</h2>
               <table style="width:100%">
                 <tr><td style="padding:6px 0"><strong>Name:</strong></td><td>${order.customerInfo.name}</td></tr>
                 <tr><td style="padding:6px 0"><strong>Phone:</strong></td><td>${order.customerInfo.phone}</td></tr>
@@ -114,7 +119,7 @@ const createOrder = async (req, res) => {
                 <tr><td style="padding:6px 0"><strong>Payment:</strong></td><td>${order.customerInfo.paymentMethod === 'cash' ? '💰 Cash on Delivery' : '💳 Card Payment'}</td></tr>
               </table>
             </div>
-            <h2 style="margin:0 0 15px 0;color:#1a472a;font-size:18px">📦 Order Items</h2>
+            <h2 style="margin:0 0 15px 0;color:#ff6b35;font-size:18px">📦 Order Items</h2>
             <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
               <thead><tr style="background:#f0f2f0"><th style="padding:12px;text-align:left">Product</th><th style="padding:12px;text-align:center">Qty</th><th style="padding:12px;text-align:right">Price</th><th style="padding:12px;text-align:right">Total</th></tr></thead>
               <tbody>${adminItemsHtml}</tbody>
@@ -122,16 +127,16 @@ const createOrder = async (req, res) => {
                 <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Subtotal:</strong></td><td style="padding:12px;text-align:right">GH₵${subtotal.toFixed(2)}</td></tr>
                 <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Delivery Fee:</strong></td><td style="padding:12px;text-align:right">GH₵${deliveryFee.toFixed(2)}</td></tr>
                 <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Tax (2.5%):</strong></td><td style="padding:12px;text-align:right">GH₵${tax.toFixed(2)}</td></tr>
-                <tr style="background:linear-gradient(135deg,#1a472a 0%,#2d6a4f 100%);color:#fff"><td colspan="3" style="padding:15px;text-align:right"><strong>TOTAL:</strong></td><td style="padding:15px;text-align:right"><strong>GH₵${totalAmount.toFixed(2)}</strong></td></tr>
+                <tr style="background:linear-gradient(135deg,#ff6b35 0%,#ff8c42 100%);color:#fff"><td colspan="3" style="padding:15px;text-align:right"><strong>TOTAL:</strong></td><td style="padding:15px;text-align:right"><strong>GH₵${totalAmount.toFixed(2)}</strong></td></tr>
               </tfoot>
             20cean
             <div style="text-align:center;margin-top:25px">
-              <a href="${process.env.ADMIN_PANEL_URL || 'http://localhost:3000/admin/orders'}" style="background:#1a472a;color:#fff;padding:12px 30px;text-decoration:none;border-radius:30px;display:inline-block">View in Dashboard →</a>
+              <a href="${FORKSUP_URL}/admin/orders" style="background:#ff6b35;color:#fff;padding:12px 30px;text-decoration:none;border-radius:30px;display:inline-block">📊 View Dashboard →</a>
             </div>
           </div>
           <div style="background:#f8faf8;padding:20px;text-align:center;border-top:1px solid #e0e5e0">
-            <p style="margin:0;color:#666;font-size:12px">Automated notification from your Food Ordering System</p>
-            <p style="margin:10px 0 0;color:#999;font-size:12px">© ${new Date().getFullYear()} All rights reserved.</p>
+            <p style="margin:0;color:#666;font-size:12px">🍔 ForksUp - Delicious Meals, Happy Customers</p>
+            <p style="margin:10px 0 0;color:#999;font-size:12px">© ${new Date().getFullYear()} ForksUp. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -142,14 +147,14 @@ const createOrder = async (req, res) => {
     // 8. SEND ADMIN EMAIL
     // ===============================
     await transporter.sendMail({
-      from: `"Food Ordering System" <${process.env.EMAIL}>`,
+      from: `"ForksUp Orders" <${process.env.EMAIL}>`,
       to: process.env.ADMIN_EMAIL || process.env.EMAIL,
-      subject: `🛍️ NEW ORDER - ${order.orderNumber}`,
+      subject: `🍽️ NEW ORDER - ${order.orderNumber} - ForksUp`,
       html: adminHtml
     });
 
     // ===============================
-    // 9. CUSTOMER EMAIL HTML
+    // 9. CUSTOMER EMAIL HTML (FORKS-UP BRANDING)
     // ===============================
     if (order.customerInfo.email) {
       const customerItemsHtml = order.items.map(item => `
@@ -175,12 +180,14 @@ const createOrder = async (req, res) => {
         <body style="margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;">
           <div style="max-width:700px;margin:40px auto;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.08)">
             <div style="background:linear-gradient(135deg,#ff6b35 0%,#ff8c42 100%);padding:35px 30px;text-align:center">
-              <h1 style="margin:0;color:#fff;font-size:28px">🎉 Thank You for Your Order!</h1>
+              <div style="font-size:56px;margin-bottom:10px;">🎉</div>
+              <h1 style="margin:0;color:#fff;font-size:28px">Thank You for Your Order!</h1>
               <p style="margin:10px 0 0;color:#fff3e0;font-size:16px">Order #${order.orderNumber}</p>
             </div>
             <div style="padding:30px">
               <p>Dear <strong>${order.customerInfo.name}</strong>,</p>
-              <p>Thank you for choosing us! Your order has been received and is being processed.</p>
+              <p>Thank you for choosing <strong style="color:#ff6b35;">ForksUp</strong>! Your order has been received and is being processed.</p>
+              
               <div style="background:#f8faf8;padding:20px;border-radius:16px;margin:20px 0">
                 <h3 style="margin:0 0 15px 0;color:#ff6b35">📋 Order Summary</h3>
                 <table style="width:100%">
@@ -189,27 +196,36 @@ const createOrder = async (req, res) => {
                   <tr><td style="padding:6px 0"><strong>Delivery:</strong></td><td>${order.customerInfo.deliveryType === 'delivery' ? '🚚 Home Delivery' : '🏪 Store Pickup'}</td></tr>
                 </table>
               </div>
+              
               <h3 style="margin:0 0 15px 0;color:#ff6b35">🛒 Your Items</h3>
               <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
                 <thead><tr style="background:#f0f2f0"><th style="padding:12px;text-align:left">Product</th><th style="padding:12px;text-align:center">Qty</th><th style="padding:12px;text-align:right">Price</th><th style="padding:12px;text-align:right">Total</th></tr></thead>
                 <tbody>${customerItemsHtml}</tbody>
                 <tfoot>
-                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Subtotal:</strong></td><td style="padding:12px;text-align:right">GH₵${subtotal.toFixed(2)}</td></tr>
-                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Delivery:</strong></td><td style="padding:12px;text-align:right">GH₵${deliveryFee.toFixed(2)}</td></tr>
-                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Tax (2.5%):</strong></td><td style="padding:12px;text-align:right">GH₵${tax.toFixed(2)}</td></tr>
+                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Subtotal:</strong></td><td style="padding:12px;text-align:right">GH₵${subtotal.toFixed(2)}</strong></td></tr>
+                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Delivery:</strong></td><td style="padding:12px;text-align:right">GH₵${deliveryFee.toFixed(2)}</strong></td></tr>
+                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Tax (2.5%):</strong></td><td style="padding:12px;text-align:right">GH₵${tax.toFixed(2)}</strong></td></tr>
                   <tr style="background:linear-gradient(135deg,#ff6b35 0%,#ff8c42 100%);color:#fff"><td colspan="3" style="padding:15px;text-align:right"><strong>TOTAL:</strong></td><td style="padding:15px;text-align:right"><strong>GH₵${totalAmount.toFixed(2)}</strong></td></tr>
                 </tfoot>
-              </table>
+              20cean
+              
               <div style="text-align:center;margin:30px 0">
-                <a href="${process.env.FRONTEND_URL}/track-order/${order.orderNumber}" style="background:#ff6b35;color:#fff;padding:14px 35px;text-decoration:none;border-radius:30px;display:inline-block;font-weight:bold">🚀 Track Your Order Live</a>
+                <a href="${FORKSUP_URL}/track-order/${order.orderNumber}" style="background:#ff6b35;color:#fff;padding:14px 35px;text-decoration:none;border-radius:30px;display:inline-block;font-weight:bold">🚀 Track Your Order Live</a>
               </div>
+              
+              <div style="background:#fff9f0;padding:15px;border-radius:12px;margin:20px 0;text-align:center">
+                <p style="margin:0;color:#ff6b35;font-size:14px">💡 <strong>ForksUp Rewards</strong></p>
+                <p style="margin:5px 0 0;color:#555;font-size:13px">Eat more, save more! Earn points on every order.</p>
+              </div>
+              
               <div style="background:#f0f2f0;padding:15px;border-radius:12px;text-align:center">
                 <p style="margin:0;color:#555;font-size:13px">📞 Need help? Contact us at ${process.env.SUPPORT_PHONE || '+233 XXX XXX XXXX'}</p>
+                <p style="margin:5px 0 0;color:#555;font-size:13px">🌐 Visit us: <a href="${FORKSUP_URL}" style="color:#ff6b35;">${FORKSUP_URL}</a></p>
               </div>
             </div>
             <div style="background:#f8faf8;padding:20px;text-align:center;border-top:1px solid #e0e5e0">
-              <p style="margin:0;color:#666;font-size:12px">Thank you for shopping with us!</p>
-              <p style="margin:10px 0 0;color:#999;font-size:12px">© ${new Date().getFullYear()} Food Ordering System. All rights reserved.</p>
+              <p style="margin:0;color:#666;font-size:12px">🍔 ForksUp - Delicious Meals, Happy Customers</p>
+              <p style="margin:10px 0 0;color:#999;font-size:12px">© ${new Date().getFullYear()} ForksUp. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -217,9 +233,9 @@ const createOrder = async (req, res) => {
       `;
 
       await transporter.sendMail({
-        from: `"Food Ordering System" <${process.env.EMAIL}>`,
+        from: `"ForksUp" <${process.env.EMAIL}>`,
         to: order.customerInfo.email,
-        subject: `✅ Order Confirmed - ${order.orderNumber}`,
+        subject: `✅ Order Confirmed - ${order.orderNumber} - ForksUp`,
         html: customerHtml
       });
     }
@@ -234,7 +250,7 @@ const createOrder = async (req, res) => {
         socketService.notifyUser(order.customerInfo.phone, 'order-confirmation', {
           orderNumber: order.orderNumber,
           status: order.status,
-          message: `Your order ${order.orderNumber} has been placed successfully!`,
+          message: `Your ForksUp order ${order.orderNumber} has been placed successfully!`,
           items: order.items.map(item => ({
             name: item.name,
             quantity: item.quantity,
@@ -283,6 +299,7 @@ const createOrder = async (req, res) => {
     });
   }
 };
+
 
 // GET ALL ORDERS
 const getOrders = async (req, res) => {
