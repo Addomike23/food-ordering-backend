@@ -94,7 +94,7 @@ const orderValidator = joi.object({
         email: joi.string().email().optional(),
         address: joi.string().allow("").optional(),
         deliveryType: joi.string().valid("pickup", "delivery").default("pickup"),
-        paymentMethod: joi.string().default("cash"),
+        paymentMethod: joi.string().valid("cash", "card").default("cash"),
     }).required(),
 
     items: joi.array().items(
@@ -108,7 +108,17 @@ const orderValidator = joi.object({
             category: joi.string().optional(),
         })
     ).min(1).required(),
-});
 
+    // ===============================
+    // PAYMENT FIELDS - Works for both cash and card
+    // ===============================
+    // For CASH: these fields are optional/not needed
+    // For CARD: these fields are required when paymentMethod is 'card'
+    paymentStatus: joi.string().valid('pending', 'paid', 'failed', 'refunded').optional(),
+    paymentReference: joi.string().optional(),
+    paidAt: joi.date().optional(),
+    paymentGateway: joi.string().valid('paystack', 'razorpay', 'stripe', 'cash').optional(),
+    paymentDetails: joi.object().optional()
+});
 
 module.exports = { orderValidator, staffValidator, subscriberMail, productValidator, messageValidator, reviewValidator, blogValidator, allowedUpdateSchema }
