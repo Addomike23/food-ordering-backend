@@ -8,9 +8,10 @@ const recommendationEngine = require('../services/recommendationEngine');
 
 
 // ForksUp Website URL
-const FORKSUP_URL =  'https://foodorderio.vercel.app/';
+const FORKSUP_URL = 'https://foodorderio.vercel.app/';
 
 const createOrder = async (req, res) => {
+  
   try {
     await connectDB();
 
@@ -42,16 +43,33 @@ const createOrder = async (req, res) => {
     }));
 
     // ===============================
-    // 4. SAVE ORDER
+    // 4. PREPARE ORDER DATA WITH PAYSTACK SUPPORT
     // ===============================
-    const order = await orderModel.create({
+    const orderData = {
       orderNumber,
       ...value,
       items: normalizedItems
-    });
+    };
+
+    // Add Paystack payment fields if payment was made
+    if (value.paymentStatus === 'paid' && value.paymentReference) {
+      orderData.paymentStatus = value.paymentStatus;
+      orderData.paymentReference = value.paymentReference;
+      orderData.paidAt = value.paidAt || new Date();
+      orderData.paymentGateway = 'paystack';
+      
+      if (value.paymentDetails) {
+        orderData.paymentDetails = value.paymentDetails;
+      }
+    }
 
     // ===============================
-    // 4.5 UPDATE PRODUCT POPULARITY
+    // 5. SAVE ORDER
+    // ===============================
+    const order = await orderModel.create(orderData);
+
+    // ===============================
+    // 6. UPDATE PRODUCT POPULARITY
     // ===============================
     for (const item of normalizedItems) {
       if (item.productId) {
@@ -66,7 +84,7 @@ const createOrder = async (req, res) => {
     console.log(`📊 Updated popularity for ${normalizedItems.length} products`);
 
     // ===============================
-    // 5. CALCULATE TOTALS (GHS CURRENCY)
+    // 7. CALCULATE TOTALS (GHS CURRENCY)
     // ===============================
     const subtotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0);
     const deliveryFee = order.customerInfo.deliveryType === 'delivery' ? 15 : 0;
@@ -74,7 +92,7 @@ const createOrder = async (req, res) => {
     const totalAmount = subtotal + deliveryFee + tax;
 
     // ===============================
-    // 6. BUILD ADMIN ITEMS TABLE HTML
+    // 8. BUILD ADMIN ITEMS TABLE HTML
     // ===============================
     const adminItemsHtml = order.items.map(item => `
       <tr style="border-bottom:1px solid #ddd">
@@ -90,7 +108,7 @@ const createOrder = async (req, res) => {
     `).join("");
 
     // ===============================
-    // 7. ADMIN EMAIL HTML (FORKS-UP BRANDING)
+    // 9. ADMIN EMAIL HTML (UNCHANGED)
     // ===============================
     const adminHtml = `
       <!DOCTYPE html>
@@ -116,7 +134,18 @@ const createOrder = async (req, res) => {
                 ${order.customerInfo.email ? `<tr><td style="padding:6px 0"><strong>Email:</strong></td><td>${order.customerInfo.email}</td></tr>` : ''}
                 <tr><td style="padding:6px 0"><strong>Delivery:</strong></td><td>${order.customerInfo.deliveryType === 'delivery' ? '🚚 Home Delivery' : '🏪 Store Pickup'}</td></tr>
                 ${order.customerInfo.address ? `<tr><td style="padding:6px 0"><strong>Address:</strong></td><td>${order.customerInfo.address}</td></tr>` : ''}
-                <tr><td style="padding:6px 0"><strong>Payment:</strong></td><td>${order.customerInfo.paymentMethod === 'cash' ? '💰 Cash on Delivery' : '💳 Card Payment'}</td></tr>
+                <tr><td style="padding:6px 0"><strong>Payment:</strong></td>
+                  <td style="padding:6px 0">
+                    ${order.customerInfo.paymentMethod === 'cash' ? '💰 Cash on Delivery' : 
+                      order.paymentStatus === 'paid' ? '💳 Card Payment (Paid)' : '💳 Card Payment'}
+                  </td>
+                </tr>
+                ${order.paymentReference ? `
+                <tr>
+                  <td style="padding:6px 0"><strong>Payment Ref:</strong></td>
+                  <td style="padding:6px 0;font-size:12px">${order.paymentReference}</td>
+                </tr>
+                ` : ''}
               </table>
             </div>
             <h2 style="margin:0 0 15px 0;color:#ff6b35;font-size:18px">📦 Order Items</h2>
@@ -144,19 +173,21 @@ const createOrder = async (req, res) => {
     `;
 
     // ===============================
-    // 8. SEND ADMIN EMAIL
+    // 10. SEND ADMIN EMAIL (Skip if payment failed)
     // ===============================
-    await transporter.sendMail({
-      from: `"ForksUp Orders" <${process.env.EMAIL}>`,
-      to: process.env.ADMIN_EMAIL || process.env.EMAIL,
-      subject: `🍽️ NEW ORDER - ${order.orderNumber} - ForksUp`,
-      html: adminHtml
-    });
+    if (order.paymentStatus !== 'failed') {
+      await transporter.sendMail({
+        from: `"ForksUp Orders" <${process.env.EMAIL}>`,
+        to: process.env.EMAIL,
+        subject: `🍽️ NEW ORDER - ${order.orderNumber} - ForksUp`,
+        html: adminHtml
+      });
+    }
 
     // ===============================
-    // 9. CUSTOMER EMAIL HTML (FORKS-UP BRANDING)
+    // 11. CUSTOMER EMAIL HTML (UNCHANGED)
     // ===============================
-    if (order.customerInfo.email) {
+    if (order.customerInfo.email && order.paymentStatus !== 'failed') {
       const customerItemsHtml = order.items.map(item => `
         <tr style="border-bottom:1px solid #ddd">
           <td style="padding:12px;vertical-align:middle">
@@ -191,10 +222,11 @@ const createOrder = async (req, res) => {
               <div style="background:#f8faf8;padding:20px;border-radius:16px;margin:20px 0">
                 <h3 style="margin:0 0 15px 0;color:#ff6b35">📋 Order Summary</h3>
                 <table style="width:100%">
-                  <tr><td style="padding:6px 0"><strong>Order Number:</strong></td><td>${order.orderNumber}</td></tr>
-                  <tr><td style="padding:6px 0"><strong>Order Date:</strong></td><td>${new Date(order.createdAt).toLocaleString()}</td></tr>
-                  <tr><td style="padding:6px 0"><strong>Delivery:</strong></td><td>${order.customerInfo.deliveryType === 'delivery' ? '🚚 Home Delivery' : '🏪 Store Pickup'}</td></tr>
-                </table>
+                  <tr><td style="padding:6px 0"><strong>Order Number:</strong><\/td><td>${order.orderNumber}<\/td><\/tr>
+                  <tr><td style="padding:6px 0"><strong>Order Date:</strong><\/td><td>${new Date(order.createdAt).toLocaleString()}<\/td><\/tr>
+                  <tr><td style="padding:6px 0"><strong>Delivery:</strong><\/td><td>${order.customerInfo.deliveryType === 'delivery' ? '🚚 Home Delivery' : '🏪 Store Pickup'}<\/td><\/tr>
+                  ${order.paymentStatus === 'paid' ? `<tr><td style="padding:6px 0"><strong>Payment:</strong><\/td><td>✅ Paid via Card<\/td><\/tr>` : ''}
+                20cean
               </div>
               
               <h3 style="margin:0 0 15px 0;color:#ff6b35">🛒 Your Items</h3>
@@ -202,10 +234,10 @@ const createOrder = async (req, res) => {
                 <thead><tr style="background:#f0f2f0"><th style="padding:12px;text-align:left">Product</th><th style="padding:12px;text-align:center">Qty</th><th style="padding:12px;text-align:right">Price</th><th style="padding:12px;text-align:right">Total</th></tr></thead>
                 <tbody>${customerItemsHtml}</tbody>
                 <tfoot>
-                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Subtotal:</strong></td><td style="padding:12px;text-align:right">GH₵${subtotal.toFixed(2)}</strong></td></tr>
-                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Delivery:</strong></td><td style="padding:12px;text-align:right">GH₵${deliveryFee.toFixed(2)}</strong></td></tr>
-                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Tax (2.5%):</strong></td><td style="padding:12px;text-align:right">GH₵${tax.toFixed(2)}</strong></td></tr>
-                  <tr style="background:linear-gradient(135deg,#ff6b35 0%,#ff8c42 100%);color:#fff"><td colspan="3" style="padding:15px;text-align:right"><strong>TOTAL:</strong></td><td style="padding:15px;text-align:right"><strong>GH₵${totalAmount.toFixed(2)}</strong></td></tr>
+                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Subtotal:</strong><\/td><td style="padding:12px;text-align:right">GH₵${subtotal.toFixed(2)}<\/strong><\/td><\/tr>
+                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Delivery:</strong><\/td><td style="padding:12px;text-align:right">GH₵${deliveryFee.toFixed(2)}<\/strong><\/td><\/tr>
+                  <tr style="background:#f8faf8"><td colspan="3" style="padding:12px;text-align:right"><strong>Tax (2.5%):</strong><\/td><td style="padding:12px;text-align:right">GH₵${tax.toFixed(2)}<\/strong><\/td><\/tr>
+                  <tr style="background:linear-gradient(135deg,#ff6b35 0%,#ff8c42 100%);color:#fff"><td colspan="3" style="padding:15px;text-align:right"><strong>TOTAL:</strong><\/td><td style="padding:15px;text-align:right"><strong>GH₵${totalAmount.toFixed(2)}<\/strong><\/td><\/tr>
                 </tfoot>
               20cean
               
@@ -241,10 +273,10 @@ const createOrder = async (req, res) => {
     }
 
     // ===============================
-    // 10. SOCKET.IO REAL-TIME NOTIFICATION
+    // 12. SOCKET.IO REAL-TIME NOTIFICATION
     // ===============================
     const socketService = req.app.get('socketService');
-    if (socketService) {
+    if (socketService && order.paymentStatus !== 'failed') {
       socketService.emitNewOrder(order);
       if (order.customerInfo.phone) {
         socketService.notifyUser(order.customerInfo.phone, 'order-confirmation', {
@@ -265,7 +297,7 @@ const createOrder = async (req, res) => {
     }
 
     // ===============================
-    // 11. GET RECOMMENDATIONS
+    // 13. GET RECOMMENDATIONS
     // ===============================
     let recommendations = [];
     try {
@@ -282,6 +314,9 @@ const createOrder = async (req, res) => {
       order: {
         orderNumber: order.orderNumber,
         status: order.status,
+        paymentStatus: order.paymentStatus,
+        paymentReference: order.paymentReference,
+        paidAt: order.paidAt,
         customerInfo: order.customerInfo,
         items: order.items,
         subtotal, deliveryFee, tax, totalAmount,
@@ -299,7 +334,6 @@ const createOrder = async (req, res) => {
     });
   }
 };
-
 
 // GET ALL ORDERS
 const getOrders = async (req, res) => {
